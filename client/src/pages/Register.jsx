@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { registerUser } from "../api/authApi";
 
 function Register() {
@@ -23,7 +25,12 @@ function Register() {
 
       alert(res.data.message);
 
-      console.log(res.data);
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+      });
+
     } catch (error) {
       alert(
         error.response?.data?.message ||
@@ -33,47 +40,75 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center px-6">
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-[#0B1225] p-8 rounded-2xl w-[400px]"
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md"
       >
-        <h1 className="text-3xl font-bold mb-6 text-center">
-          Register
-        </h1>
 
-        <input
-          type="text"
-          name="name"
-          placeholder="Name"
-          onChange={handleChange}
-          className="w-full p-3 mb-4 rounded bg-gray-800"
-        />
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          onChange={handleChange}
-          className="w-full p-3 mb-4 rounded bg-gray-800"
-        />
+          <h1 className="text-4xl font-bold text-center mb-2">
+            Create Account
+          </h1>
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          onChange={handleChange}
-          className="w-full p-3 mb-4 rounded bg-gray-800"
-        />
+          <p className="text-center text-gray-400 mb-8">
+            Join FounderVerse and start building.
+          </p>
 
-        <button
-          type="submit"
-          className="w-full bg-cyan-500 p-3 rounded"
-        >
-          Create Account
-        </button>
-      </form>
+          <form onSubmit={handleSubmit}>
+
+            <input
+              type="text"
+              name="name"
+              placeholder="Full Name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full p-4 mb-4 rounded-xl bg-black/20 border border-gray-700 focus:outline-none focus:border-cyan-400"
+            />
+
+            <input
+              type="email"
+              name="email"
+              placeholder="Email Address"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full p-4 mb-4 rounded-xl bg-black/20 border border-gray-700 focus:outline-none focus:border-cyan-400"
+            />
+
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full p-4 mb-6 rounded-xl bg-black/20 border border-gray-700 focus:outline-none focus:border-cyan-400"
+            />
+
+            <button
+              type="submit"
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold hover:scale-[1.02] transition"
+            >
+              Create Account
+            </button>
+
+          </form>
+
+          <p className="text-center text-gray-400 mt-6">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="text-cyan-400 hover:underline"
+            >
+              Login
+            </Link>
+          </p>
+
+        </div>
+
+      </motion.div>
 
     </div>
   );
