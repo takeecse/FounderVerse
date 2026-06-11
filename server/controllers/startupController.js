@@ -30,6 +30,21 @@ const createStartup = async (req, res) => {
   }
 };
 
+const getStartups = async (req, res) => {
+  try {
+    const startups = await Startup.find()
+      .populate("founder", "name email");
+
+    res.json(startups);
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createStartup,
+  getStartups,
 };
