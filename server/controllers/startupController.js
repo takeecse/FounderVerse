@@ -44,7 +44,23 @@ const getStartups = async (req, res) => {
   }
 };
 
+const getMyStartups = async (req, res) => {
+  try {
+    const startups = await Startup.find({
+      founder: req.user.id,
+    });
+
+    res.json(startups);
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createStartup,
   getStartups,
+  getMyStartups,
 };

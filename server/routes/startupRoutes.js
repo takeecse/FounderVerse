@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   createStartup,
   getStartups,
+  getMyStartups,
 } = require("../controllers/startupController");
 
 const {
@@ -11,6 +12,12 @@ const {
 } = require("../middleware/authMiddleware");
 
 router.get("/", getStartups);
+
+router.get(
+  "/my",
+  protect,
+  getMyStartups
+);
 
 router.post(
   "/",
