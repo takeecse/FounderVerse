@@ -11,6 +11,7 @@ import MyStartups from "./pages/MyStartups";
 import StartupDetails from "./pages/StartupDetails";
 import Founders from "./pages/Founders";
 import FounderDetails from "./pages/FounderDetails";
+import Requests from "./pages/Requests";
 
 function App() {
   return (
@@ -39,6 +40,10 @@ function App() {
         <Route
           path="/founders/:id"
           element={<FounderDetails />}
+        />
+        <Route
+          path="/requests"
+          element={<Requests />}
         />
       </Routes>
     </BrowserRouter>
