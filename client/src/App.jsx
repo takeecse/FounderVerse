@@ -8,6 +8,9 @@ import EditProfile from "./pages/EditProfile";
 import CreateStartup from "./pages/CreateStartup";
 import Startups from "./pages/Startups";
 import MyStartups from "./pages/MyStartups";
+import StartupDetails from "./pages/StartupDetails";
+import Founders from "./pages/Founders";
+import FounderDetails from "./pages/FounderDetails";
 
 function App() {
   return (
@@ -24,6 +27,18 @@ function App() {
         <Route
           path="/my-startups"
           element={<MyStartups />}
+        />
+        <Route
+          path="/startups/:id"
+          element={<StartupDetails />}
+        />
+        <Route
+          path="/founders"
+          element={<Founders />}
+        />
+        <Route
+          path="/founders/:id"
+          element={<FounderDetails />}
         />
       </Routes>
     </BrowserRouter>

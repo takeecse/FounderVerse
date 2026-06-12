@@ -25,3 +25,15 @@ export const updateProfile = async (profileData) => {
     }
   );
 };
+
+export const getAllUsers = async () => {
+  return axios.get(
+    "http://localhost:5000/api/users"
+  );
+};
+
+export const getUserById = async (id) => {
+  return axios.get(
+    `http://localhost:5000/api/users/${id}`
+  );
+};

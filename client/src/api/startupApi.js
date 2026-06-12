@@ -32,3 +32,7 @@ export const getMyStartups = async () => {
     }
   );
 };
+
+export const getStartupById = async (id) => {
+  return axios.get(`${API}/${id}`);
+};

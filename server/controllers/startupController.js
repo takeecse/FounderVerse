@@ -59,8 +59,33 @@ const getMyStartups = async (req, res) => {
   }
 };
 
+const getStartupById = async (req, res) => {
+  try {
+    const startup = await Startup.findById(
+      req.params.id
+    ).populate(
+      "founder",
+      "name email github linkedin"
+    );
+
+    if (!startup) {
+      return res.status(404).json({
+        message: "Startup not found",
+      });
+    }
+
+    res.json(startup);
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createStartup,
   getStartups,
   getMyStartups,
+  getStartupById,
 };

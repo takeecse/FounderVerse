@@ -5,6 +5,7 @@ const {
   createStartup,
   getStartups,
   getMyStartups,
+  getStartupById,
 } = require("../controllers/startupController");
 
 const {
@@ -18,6 +19,8 @@ router.get(
   protect,
   getMyStartups
 );
+
+router.get("/:id", getStartupById);
 
 router.post(
   "/",
