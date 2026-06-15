@@ -15,6 +15,7 @@ import Requests from "./pages/Requests";
 import SentRequests from "./pages/SentRequests";
 import EditStartup from "./pages/EditStartup";
 import Notifications from "./pages/Notifications";
+import Chat from "./pages/Chat";
 
 function App() {
   return (
@@ -59,6 +60,10 @@ function App() {
         <Route
           path="/notifications"
           element={<Notifications />}
+        />
+        <Route
+          path="/chat/:userId"
+          element={<Chat />}
         />
       </Routes>
     </BrowserRouter>

@@ -11,6 +11,8 @@ const dashboardRoutes =
 require("./routes/dashboardRoutes");
 const notificationRoutes =
 require("./routes/notificationRoutes");
+const chatRoutes =
+require("./routes/chatRoutes");
 
 console.log("SERVER JS LOADED");
 
@@ -33,6 +35,10 @@ app.use(
 app.use(
   "/api/notifications",
   notificationRoutes
+);
+app.use(
+  "/api/chat",
+  chatRoutes
 );
 
 app.get("/", (req, res) => {
