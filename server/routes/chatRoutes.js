@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   sendMessage,
   getConversation,
+  getConversations,
 } = require("../controllers/chatController");
 
 const {
@@ -14,6 +15,12 @@ router.post(
   "/send",
   protect,
   sendMessage
+);
+
+router.get(
+  "/conversations",
+  protect,
+  getConversations
 );
 
 router.get(
