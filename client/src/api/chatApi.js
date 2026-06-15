@@ -41,3 +41,18 @@ export const sendMessage = (
     }
   );
 };
+
+export const getConversations = () => {
+  const token =
+    localStorage.getItem("token");
+
+  return axios.get(
+    `${API}/conversations`,
+    {
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+};
