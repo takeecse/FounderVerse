@@ -66,7 +66,11 @@ function Dashboard() {
         >
           🔔
           <span className="ml-2 text-cyan-400">
-            {notifications.length}
+            {
+              notifications.filter(
+                (n) => !n.isRead
+              ).length
+            }
           </span>
         </Link>
       </div>

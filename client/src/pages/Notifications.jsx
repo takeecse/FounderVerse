@@ -1,59 +1,72 @@
 import { useEffect, useState } from "react";
-import { getNotifications } from "../api/notificationApi";
+import {
+    getNotifications,
+    markAllNotificationsRead,
+} from "../api/notificationApi";
 
 function Notifications() {
-  const [notifications, setNotifications] =
-    useState([]);
+    const [notifications, setNotifications] =
+        useState([]);
 
-  useEffect(() => {
-    const fetchNotifications =
-      async () => {
-        try {
-          const res =
-            await getNotifications();
+    useEffect(() => {
+        const fetchNotifications =
+            async () => {
+                try {
+                    const res =
+                        await getNotifications();
 
-          setNotifications(res.data);
+                    setNotifications(res.data);
 
-        } catch (error) {
-          console.error(error);
-        }
-      };
+                } catch (error) {
+                    console.error(error);
+                }
+            };
 
-    fetchNotifications();
-  }, []);
+        fetchNotifications();
 
-  return (
-    <div className="min-h-screen p-10">
+        const markRead = async () => {
+            try {
+                await markAllNotificationsRead();
+            } catch (error) {
+                console.error(error);
+            }
+        };
 
-      <h1 className="text-5xl font-bold mb-8">
-        Notifications
-      </h1>
+        markRead();
+    }, []);
 
-      {notifications.length === 0 ? (
-        <p>No notifications</p>
-      ) : (
-        <div className="space-y-4">
+    return (
+        <div className="min-h-screen p-10">
 
-          {notifications.map((n) => (
-            <div
-              key={n._id}
-              className="bg-[#0B1225] p-6 rounded-2xl"
-            >
-              <h2 className="font-bold text-xl">
-                {n.title}
-              </h2>
+            <h1 className="text-5xl font-bold mb-8">
+                Notifications
+            </h1>
 
-              <p className="text-gray-400 mt-2">
-                {n.message}
-              </p>
-            </div>
-          ))}
+            {notifications.length === 0 ? (
+                <p>No notifications</p>
+            ) : (
+                <div className="space-y-4">
+
+                    {notifications.map((n) => (
+                        <div
+                            key={n._id}
+                            className="bg-[#0B1225] p-6 rounded-2xl"
+                        >
+                            <h2 className="font-bold text-xl">
+                                {n.title}
+                            </h2>
+
+                            <p className="text-gray-400 mt-2">
+                                {n.message}
+                            </p>
+                        </div>
+                    ))}
+
+                </div>
+            )}
 
         </div>
-      )}
-
-    </div>
-  );
+    );
 }
 
 export default Notifications;

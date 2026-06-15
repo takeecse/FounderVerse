@@ -13,3 +13,18 @@ export const getNotifications = () => {
     },
   });
 };
+
+export const markAllNotificationsRead = () => {
+  const token =
+    localStorage.getItem("token");
+
+  return axios.put(
+    `${API}/read-all`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+};
