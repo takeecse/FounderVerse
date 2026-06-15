@@ -4,8 +4,9 @@ const router = express.Router();
 const {
   sendRequest,
   getReceivedRequests,
+  getSentRequests,
   acceptRequest,
-rejectRequest,
+  rejectRequest,
 } = require("../controllers/requestController");
 
 const {
@@ -16,6 +17,12 @@ router.get(
   "/received",
   protect,
   getReceivedRequests
+);
+
+router.get(
+  "/sent",
+  protect,
+  getSentRequests
 );
 
 router.post(

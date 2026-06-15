@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { getMyStartups } from "../api/startupApi";
+import { Link } from "react-router-dom";
+import {
+  getMyStartups,
+  deleteStartup,
+} from "../api/startupApi";
 
 function MyStartups() {
   const [startups, setStartups] = useState([]);
@@ -16,6 +20,26 @@ function MyStartups() {
 
     fetchMyStartups();
   }, []);
+
+  const handleDelete = async (id) => {
+    const confirmDelete = window.confirm(
+      "Delete this startup?"
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await deleteStartup(id);
+
+      setStartups(
+        startups.filter(
+          (startup) => startup._id !== id
+        )
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return (
     <div className="min-h-screen p-10">
@@ -45,6 +69,33 @@ function MyStartups() {
               <p className="mt-4">
                 {startup.industry}
               </p>
+
+              <div className="flex gap-3 mt-6">
+
+                <Link
+                  to={`/startups/${startup._id}`}
+                  className="bg-blue-600 px-4 py-2 rounded-lg"
+                >
+                  View
+                </Link>
+
+                <Link
+                  to={`/edit-startup/${startup._id}`}
+                  className="bg-yellow-600 px-4 py-2 rounded-lg"
+                >
+                  Edit
+                </Link>
+
+                <button
+                  onClick={() =>
+                    handleDelete(startup._id)
+                  }
+                  className="bg-red-600 px-4 py-2 rounded-lg"
+                >
+                  Delete
+                </button>
+
+              </div>
 
             </div>
           ))}

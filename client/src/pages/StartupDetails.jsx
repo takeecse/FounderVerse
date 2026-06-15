@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getStartupById } from "../api/startupApi";
+import {
+  getStartupById,
+  removeTeamMember,
+} from "../api/startupApi";
 
 function StartupDetails() {
   const { id } = useParams();
@@ -19,6 +22,36 @@ function StartupDetails() {
 
     fetchStartup();
   }, [id]);
+
+  const handleRemoveMember = async (
+    memberId
+  ) => {
+    const confirmRemove =
+      window.confirm(
+        "Remove this team member?"
+      );
+
+    if (!confirmRemove) return;
+
+    try {
+      await removeTeamMember(
+        startup._id,
+        memberId
+      );
+
+      setStartup({
+        ...startup,
+        teamMembers:
+          startup.teamMembers.filter(
+            (member) =>
+              member._id !== memberId
+          ),
+      });
+
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   if (!startup) {
     return (
@@ -82,6 +115,44 @@ function StartupDetails() {
         <p>
           {startup.founder.email}
         </p>
+
+      </div>
+
+      <div className="bg-[#0B1225] p-8 rounded-2xl mt-8">
+
+        <h2 className="text-3xl font-bold mb-4">
+          Team Members
+        </h2>
+
+        {startup.teamMembers.length === 0 ? (
+          <p className="text-gray-400">
+            No team members yet
+          </p>
+        ) : (
+          startup.teamMembers.map((member) => (
+            <div
+              key={member._id}
+              className="mb-4 border-b border-gray-700 pb-4"
+            >
+              <p className="font-bold">
+                {member.name}
+              </p>
+
+              <p className="text-gray-400">
+                {member.email}
+              </p>
+
+              <button
+                onClick={() =>
+                  handleRemoveMember(member._id)
+                }
+                className="mt-2 bg-red-600 px-3 py-1 rounded"
+              >
+                Remove
+              </button>
+            </div>
+          ))
+        )}
 
       </div>
 

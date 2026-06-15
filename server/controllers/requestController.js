@@ -1,4 +1,6 @@
 const Request = require("../models/Request");
+const Startup = require("../models/Startup");
+const Notification = require("../models/Notification");
 
 const sendRequest = async (req, res) => {
   try {
@@ -13,6 +15,12 @@ const sendRequest = async (req, res) => {
       receiver: receiverId,
       startup: startupId,
       message,
+    });
+
+    await Notification.create({
+      user: receiverId,
+      title: "New Co-Founder Request",
+      message: "You received a new co-founder request.",
     });
 
     res.status(201).json(request);
@@ -57,6 +65,28 @@ const acceptRequest = async (req, res) => {
 
     await request.save();
 
+    await Notification.create({
+      user: request.sender,
+      title: "Request Accepted",
+      message: "Your co-founder request was accepted.",
+    });
+
+    const updatedStartup =
+      await Startup.findByIdAndUpdate(
+        request.startup,
+        {
+          $addToSet: {
+            teamMembers: request.receiver,
+          },
+        },
+        { new: true }
+      );
+
+    console.log(
+      "UPDATED STARTUP:",
+      updatedStartup
+    );
+
     res.json(request);
 
   } catch (error) {
@@ -82,7 +112,30 @@ const rejectRequest = async (req, res) => {
 
     await request.save();
 
+    await Notification.create({
+      user: request.sender,
+      title: "Request Rejected",
+      message: "Your co-founder request was rejected.",
+    });
+
     res.json(request);
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+const getSentRequests = async (req, res) => {
+  try {
+    const requests = await Request.find({
+      sender: req.user.id,
+    })
+      .populate("receiver", "name email")
+      .populate("startup", "title");
+
+    res.json(requests);
 
   } catch (error) {
     res.status(500).json({
@@ -94,6 +147,7 @@ const rejectRequest = async (req, res) => {
 module.exports = {
   sendRequest,
   getReceivedRequests,
+  getSentRequests,
   acceptRequest,
   rejectRequest,
 };

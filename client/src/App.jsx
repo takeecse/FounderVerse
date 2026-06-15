@@ -12,6 +12,9 @@ import StartupDetails from "./pages/StartupDetails";
 import Founders from "./pages/Founders";
 import FounderDetails from "./pages/FounderDetails";
 import Requests from "./pages/Requests";
+import SentRequests from "./pages/SentRequests";
+import EditStartup from "./pages/EditStartup";
+import Notifications from "./pages/Notifications";
 
 function App() {
   return (
@@ -44,6 +47,18 @@ function App() {
         <Route
           path="/requests"
           element={<Requests />}
+        />
+        <Route
+          path="/sent-requests"
+          element={<SentRequests />}
+        />
+        <Route
+          path="/edit-startup/:id"
+          element={<EditStartup />}
+        />
+        <Route
+          path="/notifications"
+          element={<Notifications />}
         />
       </Routes>
     </BrowserRouter>

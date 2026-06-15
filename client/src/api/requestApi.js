@@ -42,3 +42,16 @@ export const rejectRequest = async (id) => {
     }
   );
 };
+
+export const getSentRequests = async () => {
+  const token = localStorage.getItem("token");
+
+  return axios.get(
+    "http://localhost:5000/api/requests/sent",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+};

@@ -6,6 +6,9 @@ const {
   getStartups,
   getMyStartups,
   getStartupById,
+  updateStartup,
+  deleteStartup,
+  removeTeamMember,
 } = require("../controllers/startupController");
 
 const {
@@ -26,6 +29,24 @@ router.post(
   "/",
   protect,
   createStartup
+);
+
+router.put(
+  "/:id",
+  protect,
+  updateStartup
+);
+
+router.delete(
+  "/:id",
+  protect,
+  deleteStartup
+);
+
+router.delete(
+  "/:id/team/:memberId",
+  protect,
+  removeTeamMember
 );
 
 module.exports = router;

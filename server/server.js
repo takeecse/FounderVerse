@@ -7,6 +7,12 @@ const User = require("./models/User");
 const authRoutes = require("./routes/authRoutes");
 const startupRoutes = require("./routes/startupRoutes");
 const requestRoutes = require("./routes/requestRoutes");
+const dashboardRoutes =
+require("./routes/dashboardRoutes");
+const notificationRoutes =
+require("./routes/notificationRoutes");
+
+console.log("SERVER JS LOADED");
 
 dotenv.config();
 
@@ -20,6 +26,14 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/startups", startupRoutes);
 app.use("/api/requests", requestRoutes);
+app.use(
+  "/api/dashboard",
+  dashboardRoutes
+);
+app.use(
+  "/api/notifications",
+  notificationRoutes
+);
 
 app.get("/", (req, res) => {
   res.json({
