@@ -1,3 +1,4 @@
+import socket from "../socket";
 import { useEffect, useState } from "react";
 import {
     getConversation,
@@ -41,6 +42,21 @@ function Chat() {
                 await getConversation(
                     receiverId
                 );
+            
+            console.log(
+  "CURRENT USER:",
+  currentUserId
+);
+
+console.log(
+  "RECEIVER:",
+  receiverId
+);
+
+console.log(
+  "MESSAGES:",
+  res.data
+);
 
             console.log(res.data);
 
@@ -68,12 +84,46 @@ function Chat() {
         };
 
     useEffect(() => {
-        loadMessages();
-        loadConversations();
-    }, [receiverId]);
+    loadMessages();
+    loadConversations();
+
+    const handleReceive = (data) => {
+
+        const belongsToCurrentChat =
+            (
+                data.sender === receiverId &&
+                data.receiver === currentUserId
+            ) ||
+            (
+                data.sender === currentUserId &&
+                data.receiver === receiverId
+            );
+
+        if (belongsToCurrentChat) {
+            setMessages((prev) => [
+                ...prev,
+                data,
+            ]);
+        }
+    };
+
+    socket.on(
+        "receive_message",
+        handleReceive
+    );
+
+    return () => {
+        socket.off(
+            "receive_message",
+            handleReceive
+        );
+    };
+
+}, [receiverId, currentUserId]);
 
     const handleSend =
         async () => {
+
             if (!message.trim()) return;
 
             try {
@@ -82,6 +132,15 @@ function Chat() {
                     receiverId,
                     message
                 );
+
+                socket.emit(
+    "send_message",
+    {
+        sender: currentUserId,
+        receiver: receiverId,
+        message,
+    }
+);
 
                 setMessage("");
 
