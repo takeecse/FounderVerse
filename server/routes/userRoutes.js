@@ -6,16 +6,33 @@ const {
   updateProfile,
   getAllUsers,
   getUserById,
+  getConnections,
 } = require("../controllers/userController");
-const { protect } = require("../middleware/authMiddleware");
+
+const {
+  protect,
+} = require("../middleware/authMiddleware");
 
 router.get("/", getAllUsers);
-router.get("/profile", protect, getProfile);
+
+router.get(
+  "/profile",
+  protect,
+  getProfile
+);
+
 router.put(
   "/profile",
   protect,
   updateProfile
 );
+
+router.get(
+  "/connections",
+  protect,
+  getConnections
+);
+
 router.get("/:id", getUserById);
 
 module.exports = router;

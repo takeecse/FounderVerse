@@ -9,3 +9,6 @@ export const registerUser = (userData) =>
 
 export const loginUser = (userData) =>
   API.post("/login", userData);
+
+export const firebaseLogin = (authData) =>
+  API.post("/firebase", authData);

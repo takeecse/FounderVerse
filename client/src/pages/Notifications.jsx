@@ -50,7 +50,15 @@ function Notifications() {
                     {notifications.map((n) => (
                         <div
                             key={n._id}
-                            className="bg-[#0B1225] p-6 rounded-2xl"
+                            className="
+bg-[#0B1225]
+p-6
+rounded-3xl
+border
+border-white/10
+hover:border-cyan-500/40
+transition
+"
                         >
                             <h2 className="font-bold text-xl">
                                 {n.title}
@@ -58,6 +66,9 @@ function Notifications() {
 
                             <p className="text-gray-400 mt-2">
                                 {n.message}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-3">
+                                {new Date(n.createdAt).toLocaleString()}
                             </p>
                         </div>
                     ))}

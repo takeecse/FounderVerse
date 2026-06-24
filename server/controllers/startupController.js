@@ -9,6 +9,14 @@ const createStartup = async (req, res) => {
       industry,
       techStack,
       lookingFor,
+      website,
+      location,
+      stage,
+      fundingStatus,
+      fundingNeeded,
+      isHiring,
+      teamSize,
+      logo,
     } = req.body;
 
     const startup = await Startup.create({
@@ -18,6 +26,16 @@ const createStartup = async (req, res) => {
       industry,
       techStack,
       lookingFor,
+      teamSize,
+      logo,
+
+      website,
+      location,
+      stage,
+      fundingStatus,
+      fundingNeeded,
+      isHiring,
+
       founder: req.user.id,
     });
 
@@ -33,8 +51,11 @@ const createStartup = async (req, res) => {
 const getStartups = async (req, res) => {
   try {
     const startups = await Startup.find()
-    .populate("founder", "name email")
-    .populate("teamMembers", "name email");
+      .populate(
+        "founder",
+        "name email photoURL role location"
+      )
+      .populate("teamMembers", "name email");
 
     res.json(startups);
 
@@ -66,12 +87,28 @@ const getStartupById = async (req, res) => {
       req.params.id
     ).populate(
       "founder",
-      "name email github linkedin"
+      `
+  name
+  email
+  photoURL
+  role
+  location
+  github
+  linkedin
+  `
     )
-    .populate(
-    "teamMembers",
-    "name email github linkedin"
-    );
+      .populate(
+        "teamMembers",
+        `
+  name
+  email
+  photoURL
+  role
+  location
+  github
+  linkedin
+  `
+      );
 
     if (!startup) {
       return res.status(404).json({
@@ -110,26 +147,50 @@ const updateStartup = async (req, res) => {
     }
 
     startup.title =
-      req.body.title || startup.title;
+      req.body.title ?? startup.title;
 
     startup.tagline =
-      req.body.tagline || startup.tagline;
+      req.body.tagline ?? startup.tagline;
 
     startup.description =
-      req.body.description ||
+      req.body.description ??
       startup.description;
 
     startup.industry =
-      req.body.industry ||
+      req.body.industry ??
       startup.industry;
 
     startup.techStack =
-      req.body.techStack ||
+      req.body.techStack ??
       startup.techStack;
 
     startup.lookingFor =
-      req.body.lookingFor ||
+      req.body.lookingFor ??
       startup.lookingFor;
+
+    startup.website =
+      req.body.website ??
+      startup.website;
+
+    startup.location =
+      req.body.location ??
+      startup.location;
+
+    startup.stage =
+      req.body.stage ??
+      startup.stage;
+
+    startup.fundingStatus =
+      req.body.fundingStatus ??
+      startup.fundingStatus;
+
+    startup.fundingNeeded =
+      req.body.fundingNeeded ??
+      startup.fundingNeeded;
+
+    startup.isHiring =
+      req.body.isHiring ??
+      startup.isHiring;
 
     const updatedStartup =
       await startup.save();

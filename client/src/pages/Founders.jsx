@@ -1,5 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  FaArrowRight,
+  FaLocationDot,
+  FaMagnifyingGlass,
+  FaStar,
+} from "react-icons/fa6";
 import { getAllUsers } from "../api/userApi";
 
 function Founders() {
@@ -20,84 +26,127 @@ function Founders() {
     fetchUsers();
   }, []);
 
-const filteredUsers = users.filter((user) => {
-  const matchesName =
-    user.name
-      .toLowerCase()
-      .includes(nameSearch.toLowerCase());
+  const filteredUsers = useMemo(
+    () =>
+      users.filter((user) => {
+        const matchesName = user.name
+          ?.toLowerCase()
+          .includes(nameSearch.toLowerCase());
 
-  const matchesSkill =
-    skillSearch === ""
-      ? true
-      : user.skills.some((skill) =>
-          skill
-            .toLowerCase()
-            .includes(skillSearch.toLowerCase())
-        );
+        const matchesSkill =
+          !skillSearch ||
+          user.skills?.some((skill) =>
+            skill
+              .toLowerCase()
+              .includes(skillSearch.toLowerCase())
+          );
 
-  return matchesName && matchesSkill;
-});
+        return matchesName && matchesSkill;
+      }),
+    [users, nameSearch, skillSearch]
+  );
 
   return (
-    <div className="min-h-screen p-10">
-
-      <h1 className="text-5xl font-bold mb-8">
-        Browse Founders
-      </h1>
-
-      <div className="grid md:grid-cols-2 gap-4 mb-8">
-
-        <input
-            type="text"
-            placeholder="Search by founder name..."
-            value={nameSearch}
-            onChange={(e) =>
-            setNameSearch(e.target.value)
-            }
-            className="p-3 rounded-xl bg-[#0B1225]"
-        />
-
-        <input
-            type="text"
-            placeholder="Search by skill..."
-            value={skillSearch}
-            onChange={(e) =>
-            setSkillSearch(e.target.value)
-            }
-            className="p-3 rounded-xl bg-[#0B1225]"
-        />
-
+    <div className="page-shell page-wide">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Founder discovery</p>
+          <h1 className="page-title">
+            Discover Founders
+          </h1>
+          <p className="page-subtitle">
+            Search for builders by name, role, skills, and
+            startup intent.
+          </p>
         </div>
-
-      <div className="grid gap-6">
-
-        {filteredUsers.map((user) => (
-            <Link
-                key={user._id}
-                to={`/founders/${user._id}`}
-                className="bg-[#0B1225] p-6 rounded-2xl block hover:bg-[#111A35] transition"
-            >
-            <h2 className="text-2xl font-bold">
-              {user.name}
-            </h2>
-
-            <p className="text-gray-400 mt-2">
-              {user.bio || "No bio"}
-            </p>
-
-            <p className="mt-4">
-              Skills:
-              {" "}
-              {user.skills.length > 0
-                ? user.skills.join(", ")
-                : "None"}
-            </p>
-
-          </Link>
-        ))}
-
+        <span className="chip chip-mint">
+          {filteredUsers.length} profiles
+        </span>
       </div>
 
+      <section className="glass-panel mb-8 grid gap-4 p-4 md:grid-cols-2">
+        <label className="relative">
+          <FaMagnifyingGlass className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Search founder..."
+            value={nameSearch}
+            onChange={(e) =>
+              setNameSearch(e.target.value)
+            }
+            className="field pl-11"
+          />
+        </label>
+
+        <label className="relative">
+          <FaMagnifyingGlass className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Search skill..."
+            value={skillSearch}
+            onChange={(e) =>
+              setSkillSearch(e.target.value)
+            }
+            className="field pl-11"
+          />
+        </label>
+      </section>
+
+      <section className="card-grid">
+        {filteredUsers.map((user) => (
+          <Link
+            key={user._id}
+            to={`/founders/${user._id}`}
+            className="glass-card p-6"
+          >
+            <div className="flex items-start gap-4">
+              <img
+                src={
+                  user.photoURL ||
+                  `https://ui-avatars.com/api/?name=${user.name}`
+                }
+                alt={user.name}
+                className="avatar h-16 w-16"
+              />
+              <div className="min-w-0 flex-1">
+                <h2 className="truncate text-2xl font-black">
+                  {user.name}
+                </h2>
+                <p className="mt-1 text-cyan-200">
+                  {user.role || "Founder"}
+                </p>
+                <p className="mt-2 flex items-center gap-2 text-sm text-slate-400">
+                  <FaLocationDot />
+                  {user.location || "Remote"}
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-5 line-clamp-3 min-h-[72px] text-sm leading-6 text-slate-400">
+              {user.bio || "No bio added yet."}
+            </p>
+
+            <div className="mt-5 flex min-h-[68px] flex-wrap content-start gap-2">
+              {user.skills?.slice(0, 4).map((skill) => (
+                <span key={skill} className="chip">
+                  {skill}
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-5">
+              <span className="flex items-center gap-2 text-sm font-bold text-amber-200">
+                <FaStar />
+                {user.executionScore || 0}
+              </span>
+              <span className="flex items-center gap-2 text-sm font-bold text-cyan-200">
+                View
+                <FaArrowRight />
+              </span>
+            </div>
+          </Link>
+        ))}
+      </section>
     </div>
   );
 }

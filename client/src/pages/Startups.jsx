@@ -106,19 +106,133 @@ function Startups() {
           <Link
             key={startup._id}
             to={`/startups/${startup._id}`}
-            className="bg-[#0B1225] p-6 rounded-2xl block hover:bg-[#111A35] transition"
+            className="
+    bg-[#0B1225]
+    p-6
+    rounded-3xl
+    block
+    hover:bg-[#111A35]
+    transition
+    border
+    border-white/5
+    hover:border-cyan-500/40
+    "
           >
-            <h2 className="text-2xl font-bold">
-              {startup.title}
-            </h2>
+            <div className="flex justify-between items-start">
 
-            <p className="text-gray-400 mt-2">
-              {startup.tagline}
-            </p>
+              <div className="flex items-center gap-4">
 
-            <p className="mt-4">
-              Founder: {startup.founder?.name}
-            </p>
+                <img
+                  src={
+                    startup.logo ||
+                    `https://ui-avatars.com/api/?name=${startup.title}`
+                  }
+                  alt=""
+                  className="w-14 h-14 rounded-xl"
+                />
+
+                <div>
+                  <h2 className="text-2xl font-bold">
+                    {startup.title}
+                  </h2>
+
+                  <p className="text-gray-400">
+                    {startup.tagline}
+                  </p>
+
+                  <p className="mt-4 text-gray-400 line-clamp-2">
+                    {startup.description}
+                  </p>
+                </div>
+
+              </div>
+
+              <span
+                className="
+        bg-cyan-500/20
+        text-cyan-400
+        px-3
+        py-1
+        rounded-full
+        text-sm
+        "
+              >
+                {startup.stage || "Idea"}
+              </span>
+
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-5">
+
+              <span className="bg-gray-800 px-3 py-1 rounded-full text-sm">
+                {startup.industry}
+              </span>
+
+              {startup.isHiring && (
+                <span
+                  className="
+          bg-green-500/20
+          text-green-400
+          px-3
+          py-1
+          rounded-full
+          text-sm
+          "
+                >
+                  Hiring
+                </span>
+              )}
+
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-4">
+
+              {startup.techStack
+                ?.slice(0, 4)
+                .map((tech) => (
+                  <span
+                    key={tech}
+                    className="
+            bg-purple-500/20
+            text-purple-300
+            px-3
+            py-1
+            rounded-full
+            text-sm
+            "
+                  >
+                    {tech}
+                  </span>
+                ))}
+
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-4 text-sm text-gray-400">
+
+              <span>
+                Founder: {startup.founder?.name}
+              </span>
+
+              {startup.location && (
+                <span>
+                  📍 {startup.location}
+                </span>
+              )}
+
+              {startup.teamSize && (
+                <span>
+                  👥 {startup.teamSize} Members
+                </span>
+              )}
+
+              {startup.fundingStatus && (
+                <span>
+                  💰 {startup.fundingStatus}
+                </span>
+              )}
+
+            </div>
+
           </Link>
         ))}
 

@@ -37,3 +37,16 @@ export const getUserById = async (id) => {
     `http://localhost:5000/api/users/${id}`
   );
 };
+
+export const getConnections = async () => {
+  const token = localStorage.getItem("token");
+
+  return axios.get(
+    `${API}/connections`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+};

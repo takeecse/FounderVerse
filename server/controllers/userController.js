@@ -22,18 +22,34 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    user.bio = req.body.bio || user.bio;
-    user.github = req.body.github || user.github;
-    user.linkedin = req.body.linkedin || user.linkedin;
-    user.skills = req.body.skills || user.skills;
+    user.bio = req.body.bio ?? user.bio;
+    user.github = req.body.github ?? user.github;
+    user.linkedin = req.body.linkedin ?? user.linkedin;
+    user.skills = req.body.skills ?? user.skills;
+
+    user.role = req.body.role ?? user.role;
+    user.location = req.body.location ?? user.location;
+    user.interests =
+      req.body.interests ?? user.interests;
+
+    user.lookingFor =
+      req.body.lookingFor ?? user.lookingFor;
+
+    user.portfolio =
+      req.body.portfolio ?? user.portfolio;
+
+    user.photoURL =
+      req.body.photoURL ?? user.photoURL;
+
+    user.profileCompleted = true;
 
     const updatedUser = await user.save();
 
-   const userResponse = await User.findById(
-  req.user.id
-).select("-password");
+    const userResponse = await User.findById(
+      req.user.id
+    ).select("-password");
 
-res.json(userResponse);
+    res.json(userResponse);
   } catch (error) {
     res.status(500).json({
       message: error.message,
@@ -76,9 +92,30 @@ const getUserById = async (req, res) => {
   }
 };
 
+const getConnections = async (req, res) => {
+  try {
+
+    const user = await User.findById(
+      req.user.id
+    )
+      .populate(
+        "connections",
+        "name email photoURL role location"
+      );
+
+    res.json(user.connections);
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
   getAllUsers,
   getUserById,
+  getConnections,
 };

@@ -4,6 +4,8 @@ const router = express.Router();
 const {
   registerUser,
   loginUser,
+  googleLogin,
+  firebaseLogin,
 } = require("../controllers/authController");
 
 router.get("/test", (req, res) => {
@@ -14,5 +16,7 @@ router.get("/test", (req, res) => {
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.post("/firebase", firebaseLogin);
+router.post("/google", googleLogin);
 
 module.exports = router;

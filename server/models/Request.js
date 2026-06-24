@@ -17,7 +17,7 @@ const requestSchema = new mongoose.Schema(
     startup: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Startup",
-      required: true,
+      required: false,
     },
 
     message: {
@@ -40,7 +40,8 @@ const requestSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model(
-  "Request",
-  requestSchema
-);
+module.exports =
+  mongoose.model(
+    "Request",
+    requestSchema
+  );

@@ -1,9 +1,21 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { registerUser } from "../api/authApi";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  updateProfile,
+} from "firebase/auth";
+import {
+  FaArrowRight,
+  FaEnvelope,
+  FaLock,
+  FaUser,
+} from "react-icons/fa6";
+import { auth } from "../firebase";
 
 function Register() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -21,95 +33,129 @@ function Register() {
     e.preventDefault();
 
     try {
-      const res = await registerUser(formData);
+      setLoading(true);
+      const credential =
+        await createUserWithEmailAndPassword(
+          auth,
+          formData.email,
+          formData.password
+        );
 
-      alert(res.data.message);
-
-      setFormData({
-        name: "",
-        email: "",
-        password: "",
+      await updateProfile(credential.user, {
+        displayName: formData.name,
       });
 
-    } catch (error) {
-      alert(
-        error.response?.data?.message ||
-        "Registration failed"
+      await sendEmailVerification(
+        credential.user
       );
+
+      alert(
+        "Account created. Please verify your email before logging in."
+      );
+
+      navigate("/login");
+    } catch (error) {
+      alert(error.message || "Registration failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
-
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
-      >
-
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
-
-          <h1 className="text-4xl font-bold text-center mb-2">
-            Create Account
+    <div className="page-shell flex min-h-[calc(100vh-120px)] items-center justify-center">
+      <div className="grid w-full max-w-5xl gap-8 lg:grid-cols-[1fr_440px]">
+        <div className="flex flex-col justify-center">
+          <p className="eyebrow">Join the network</p>
+          <h1 className="page-title">
+            Build a founder identity people can trust.
           </h1>
+          <p className="page-subtitle">
+            Create your account, complete your profile, and
+            start matching with teams, builders, and startup
+            opportunities.
+          </p>
+        </div>
 
-          <p className="text-center text-gray-400 mb-8">
-            Join FounderVerse and start building.
+        <form
+          onSubmit={handleSubmit}
+          className="glass-panel p-6 sm:p-8"
+        >
+          <h2 className="text-3xl font-black">
+            Create Account
+          </h2>
+          <p className="mt-2 text-sm text-slate-400">
+            FounderVerse starts with a verified account.
           </p>
 
-          <form onSubmit={handleSubmit}>
-
+          <label className="mt-8 block">
+            <span className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-300">
+              <FaUser />
+              Full name
+            </span>
             <input
               type="text"
               name="name"
-              placeholder="Full Name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full p-4 mb-4 rounded-xl bg-black/20 border border-gray-700 focus:outline-none focus:border-cyan-400"
+              className="field"
+              placeholder="Your name"
+              required
             />
+          </label>
 
+          <label className="mt-4 block">
+            <span className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-300">
+              <FaEnvelope />
+              Email
+            </span>
             <input
               type="email"
               name="email"
-              placeholder="Email Address"
               value={formData.email}
               onChange={handleChange}
-              className="w-full p-4 mb-4 rounded-xl bg-black/20 border border-gray-700 focus:outline-none focus:border-cyan-400"
+              className="field"
+              placeholder="you@example.com"
+              required
             />
+          </label>
 
+          <label className="mt-4 block">
+            <span className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-300">
+              <FaLock />
+              Password
+            </span>
             <input
               type="password"
               name="password"
-              placeholder="Password"
               value={formData.password}
               onChange={handleChange}
-              className="w-full p-4 mb-6 rounded-xl bg-black/20 border border-gray-700 focus:outline-none focus:border-cyan-400"
+              className="field"
+              placeholder="At least 6 characters"
+              minLength="6"
+              required
             />
+          </label>
 
-            <button
-              type="submit"
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 font-semibold hover:scale-[1.02] transition"
-            >
-              Create Account
-            </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn btn-primary mt-6 w-full"
+          >
+            {loading ? "Creating..." : "Create Account"}
+            <FaArrowRight />
+          </button>
 
-          </form>
-
-          <p className="text-center text-gray-400 mt-6">
+          <p className="mt-6 text-center text-sm text-slate-400">
             Already have an account?{" "}
             <Link
               to="/login"
-              className="text-cyan-400 hover:underline"
+              className="font-bold text-cyan-200"
             >
               Login
             </Link>
           </p>
-
-        </div>
-
-      </motion.div>
-
+        </form>
+      </div>
     </div>
   );
 }
