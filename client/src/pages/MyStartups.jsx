@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  getMyStartups,
+  FaEye,
+  FaPen,
+  FaPlus,
+  FaTrash,
+} from "react-icons/fa6";
+import {
   deleteStartup,
+  getMyStartups,
 } from "../api/startupApi";
 
 function MyStartups() {
@@ -22,165 +28,127 @@ function MyStartups() {
   }, []);
 
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
-      "Delete this startup?"
-    );
-
-    if (!confirmDelete) return;
+    if (!window.confirm("Delete this startup?")) {
+      return;
+    }
 
     try {
       await deleteStartup(id);
-
       setStartups(
-        startups.filter(
-          (startup) => startup._id !== id
-        )
+        startups.filter((startup) => startup._id !== id)
       );
     } catch (error) {
-      console.error(error);
+      alert(
+        error.response?.data?.message ||
+          "Failed to delete startup"
+      );
     }
   };
 
   return (
-    <div className="min-h-screen p-10">
-
-      <h1 className="text-5xl font-bold mb-8">
-        My Startups
-      </h1>
+    <div className="page-shell">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Founder portfolio</p>
+          <h1 className="page-title">
+            My Startups
+          </h1>
+          <p className="page-subtitle">
+            Manage the ventures connected to your account.
+          </p>
+        </div>
+        <Link
+          to="/create-startup"
+          className="btn btn-primary"
+        >
+          <FaPlus />
+          New Startup
+        </Link>
+      </div>
 
       {startups.length === 0 ? (
-        <p>No startups created yet.</p>
+        <section className="glass-panel p-8 text-center">
+          <h2 className="text-2xl font-black">
+            No startups yet
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-slate-400">
+            Create your first startup profile and start
+            attracting collaborators.
+          </p>
+        </section>
       ) : (
-        <div className="grid gap-6">
-
+        <section className="grid gap-5">
           {startups.map((startup) => (
-            <div
+            <article
               key={startup._id}
-              className="
-    bg-[#0B1225]
-    p-6
-    rounded-3xl
-    border
-    border-white/10
-    hover:border-cyan-500/40
-    transition
-    "
+              className="glass-card p-6"
             >
-              <div className="flex justify-between items-start">
-
-                <div className="flex items-center gap-4">
-
+              <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                <div className="flex items-start gap-4">
                   <img
                     src={
                       startup.logo ||
                       `https://ui-avatars.com/api/?name=${startup.title}`
                     }
-                    alt=""
-                    className="w-14 h-14 rounded-xl"
+                    alt={startup.title}
+                    className="avatar h-16 w-16"
                   />
-
                   <div>
-                    <h2 className="text-2xl font-bold">
+                    <h2 className="text-3xl font-black">
                       {startup.title}
                     </h2>
-
-                    <p className="text-gray-400">
+                    <p className="mt-2 text-cyan-200">
                       {startup.tagline}
                     </p>
+                    <p className="mt-3 text-slate-400">
+                      {startup.location || "Remote"} ·{" "}
+                      {startup.industry || "Industry not set"}
+                    </p>
                   </div>
-
                 </div>
 
-                <span
-                  className="
-        bg-cyan-500/20
-        text-cyan-400
-        px-3
-        py-1
-        rounded-full
-        text-sm
-        "
-                >
-                  {startup.stage || "Idea"}
-                </span>
-
-              </div>
-
-              <div className="flex flex-wrap gap-2 mt-5">
-
-                <span className="bg-gray-800 px-3 py-1 rounded-full text-sm">
-                  {startup.industry}
-                </span>
-
-                {startup.isHiring && (
-                  <span
-                    className="
-          bg-green-500/20
-          text-green-400
-          px-3
-          py-1
-          rounded-full
-          text-sm
-          "
-                  >
-                    Hiring
+                <div className="flex flex-wrap gap-2">
+                  <span className="chip">
+                    {startup.stage || "Idea"}
                   </span>
-                )}
-
+                  {startup.isHiring && (
+                    <span className="chip chip-mint">
+                      Hiring
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <div className="mt-5 text-gray-400">
-                {startup.location || "Remote"}
-              </div>
-
-              <div className="flex gap-3 mt-6">
-
+              <div className="mt-6 flex flex-wrap gap-3 border-t border-white/10 pt-5">
                 <Link
                   to={`/startups/${startup._id}`}
-                  className="
-        bg-blue-600
-        px-4
-        py-2
-        rounded-xl
-        "
+                  className="btn btn-secondary"
                 >
+                  <FaEye />
                   View
                 </Link>
-
                 <Link
                   to={`/edit-startup/${startup._id}`}
-                  className="
-        bg-yellow-600
-        px-4
-        py-2
-        rounded-xl
-        "
+                  className="btn btn-warning"
                 >
+                  <FaPen />
                   Edit
                 </Link>
-
                 <button
+                  type="button"
                   onClick={() =>
                     handleDelete(startup._id)
                   }
-                  className="
-        bg-red-600
-        px-4
-        py-2
-        rounded-xl
-        "
+                  className="btn btn-danger"
                 >
+                  <FaTrash />
                   Delete
                 </button>
-
               </div>
-
-            </div>
+            </article>
           ))}
-
-        </div>
+        </section>
       )}
-
     </div>
   );
 }

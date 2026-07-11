@@ -27,6 +27,28 @@ export const sendRequest = async (
   );
 };
 
+export const getRequestStatus = async (
+  receiverId,
+  startupId
+) => {
+  const token =
+    localStorage.getItem("token");
+
+  return axios.get(
+    `${API}/status`,
+    {
+      params: {
+        receiverId,
+        ...(startupId ? { startupId } : {}),
+      },
+      headers: {
+        Authorization:
+          `Bearer ${token}`,
+      },
+    }
+  );
+};
+
 export const getReceivedRequests =
   async () => {
     const token =

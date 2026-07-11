@@ -2,7 +2,10 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const firebaseAdmin = require("../config/firebaseAdmin");
-const { getAuth } = require("firebase-admin/auth");
+
+const FIREBASE_WEB_API_KEY =
+  process.env.FIREBASE_WEB_API_KEY ||
+  "AIzaSyDsWjs9r81XxwVl9oLqAqeWkpeSnv51eLc";
 
 const createToken = (userId) =>
   jwt.sign(
@@ -25,8 +28,7 @@ const getVerifiedFirebaseUser = async (
     throw error;
   }
 
-  const decoded =
-    await getAuth().verifyIdToken(idToken);
+  const decoded = await verifyFirebaseIdToken(idToken);
 
   if (!decoded.email) {
     const error = new Error(
@@ -70,9 +72,54 @@ const getVerifiedFirebaseUser = async (
   user.firebaseUid = decoded.uid;
   user.name = user.name || fallbackName;
   user.photoURL =
-    decoded.picture || user.photoURL || "";
+    user.photoURL || decoded.picture || "";
 
   return user.save();
+};
+
+const verifyFirebaseIdToken = async (idToken) => {
+  try {
+    const decoded = await firebaseAdmin
+      .auth()
+      .verifyIdToken(idToken);
+
+    return decoded;
+  } catch (adminError) {
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_WEB_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          idToken,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.users?.length) {
+      const error = new Error(
+        data.error?.message ||
+          adminError.message ||
+          "Firebase token verification failed"
+      );
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const user = data.users[0];
+
+    return {
+      uid: user.localId,
+      email: user.email,
+      email_verified: user.emailVerified,
+      name: user.displayName,
+      picture: user.photoUrl,
+    };
+  }
 };
 
 const registerUser = async (req, res) => {
@@ -97,6 +144,7 @@ const registerUser = async (req, res) => {
 
     res.status(201).json({
       message: "User registered successfully",
+      token: createToken(user._id),
       user,
     });
 
@@ -135,6 +183,13 @@ const loginUser = async (req, res) => {
     res.json({
       message: "Login successful",
       token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        photoURL: user.photoURL,
+        profileCompleted: user.profileCompleted,
+      },
     });
 
   } catch (error) {
@@ -161,6 +216,7 @@ const googleLogin = async (req, res) => {
         name: user.name,
         email: user.email,
         photoURL: user.photoURL,
+        profileCompleted: user.profileCompleted,
       },
     });
 

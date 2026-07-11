@@ -16,56 +16,92 @@ import SentRequests from "./pages/SentRequests";
 import EditStartup from "./pages/EditStartup";
 import Notifications from "./pages/Notifications";
 import Chat from "./pages/Chat";
+import Connections from "./pages/Connections";
+import Navbar from "./components/Navbar";
+import OnboardingGate from "./components/OnboardingGate";
+import RequireAuth from "./components/RequireAuth";
+
+const privatePage = (page) => (
+  <RequireAuth>{page}</RequireAuth>
+);
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/edit-profile" element={<EditProfile />} />
-        <Route path="/create-startup" element={<CreateStartup />} />
-        <Route path="/startups" element={<Startups />} />
-        <Route
-          path="/my-startups"
-          element={<MyStartups />}
-        />
-        <Route
-          path="/startups/:id"
-          element={<StartupDetails />}
-        />
-        <Route
-          path="/founders"
-          element={<Founders />}
-        />
-        <Route
-          path="/founders/:id"
-          element={<FounderDetails />}
-        />
-        <Route
-          path="/requests"
-          element={<Requests />}
-        />
-        <Route
-          path="/sent-requests"
-          element={<SentRequests />}
-        />
-        <Route
-          path="/edit-startup/:id"
-          element={<EditStartup />}
-        />
-        <Route
-          path="/notifications"
-          element={<Notifications />}
-        />
-        <Route
-          path="/chat/:userId"
-          element={<Chat />}
-        />
-      </Routes>
+      <div className="app-shell">
+        <Navbar />
+        <main>
+          <OnboardingGate>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route
+                path="/dashboard"
+                element={privatePage(<Dashboard />)}
+              />
+              <Route
+                path="/profile"
+                element={privatePage(<Profile />)}
+              />
+              <Route
+                path="/edit-profile"
+                element={privatePage(<EditProfile />)}
+              />
+              <Route
+                path="/complete-profile"
+                element={privatePage(<EditProfile />)}
+              />
+              <Route
+                path="/create-startup"
+                element={privatePage(<CreateStartup />)}
+              />
+              <Route path="/startups" element={<Startups />} />
+              <Route
+                path="/my-startups"
+                element={privatePage(<MyStartups />)}
+              />
+              <Route
+                path="/startups/:id"
+                element={<StartupDetails />}
+              />
+              <Route path="/founders" element={<Founders />} />
+              <Route
+                path="/founders/:id"
+                element={<FounderDetails />}
+              />
+              <Route
+                path="/requests"
+                element={privatePage(<Requests />)}
+              />
+              <Route
+                path="/sent-requests"
+                element={privatePage(<SentRequests />)}
+              />
+              <Route
+                path="/edit-startup/:id"
+                element={privatePage(<EditStartup />)}
+              />
+              <Route
+                path="/connections"
+                element={privatePage(<Connections />)}
+              />
+              <Route
+                path="/notifications"
+                element={privatePage(<Notifications />)}
+              />
+              <Route
+                path="/chat"
+                element={privatePage(<Chat />)}
+              />
+              <Route
+                path="/chat/:userId"
+                element={privatePage(<Chat />)}
+              />
+            </Routes>
+          </OnboardingGate>
+        </main>
+      </div>
     </BrowserRouter>
   );
 }

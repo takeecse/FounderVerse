@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  FaComments,
+  FaPaperPlane,
+} from "react-icons/fa6";
 import { getSentRequests } from "../api/requestApi";
+
+const statusClass = {
+  accepted: "chip chip-mint",
+  rejected: "chip chip-rose",
+  pending: "chip chip-amber",
+};
 
 function SentRequests() {
   const [requests, setRequests] = useState([]);
@@ -18,102 +29,99 @@ function SentRequests() {
   }, []);
 
   return (
-    <div className="min-h-screen p-10">
-
-      <h1 className="text-5xl font-bold mb-8">
-        Sent Requests
-      </h1>
-
-      <div className="grid gap-6">
-
-        {requests.length === 0 && (
-          <div className="bg-[#0B1225] p-8 rounded-2xl">
-            No requests sent yet.
-          </div>
-        )}
-
-        {requests.map((request) => (
-          <div
-            key={request._id}
-            className="
-            bg-[#0B1225]
-            p-6
-            rounded-3xl
-            border
-            border-white/10
-            "
-          >
-
-            <div className="flex items-center gap-4">
-
-              <img
-                src={
-                  request.receiver.photoURL ||
-                  `https://ui-avatars.com/api/?name=${request.receiver.name}`
-                }
-                alt=""
-                className="
-                w-16
-                h-16
-                rounded-full
-                border
-                border-cyan-500
-                "
-              />
-
-              <div>
-
-                <h2 className="text-2xl font-bold">
-                  {request.receiver.name}
-                </h2>
-
-                <p className="text-cyan-400">
-                  {request.receiver.role ||
-                    "Founder"}
-                </p>
-
-                <p className="text-gray-400">
-                  {request.receiver.email}
-                </p>
-
-              </div>
-
-            </div>
-
-            <div className="mt-5">
-
-              <p className="text-gray-300">
-                {request.message ||
-                  "Let's collaborate."}
-              </p>
-
-            </div>
-
-            <div className="mt-5">
-
-              <span className="text-gray-400">
-                Status:
-              </span>
-
-              <span
-                className={`ml-2 font-semibold ${
-                  request.status === "accepted"
-                    ? "text-green-400"
-                    : request.status === "rejected"
-                    ? "text-red-400"
-                    : "text-yellow-400"
-                }`}
-              >
-                {request.status}
-              </span>
-
-            </div>
-
-          </div>
-        ))}
-
+    <div className="page-shell">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Outbox</p>
+          <h1 className="page-title">
+            Sent Requests
+          </h1>
+          <p className="page-subtitle">
+            Track your collaboration outreach and jump into chat
+            once a founder accepts.
+          </p>
+        </div>
+        <span className="chip">
+          <FaPaperPlane />
+          {requests.length} sent
+        </span>
       </div>
 
+      <section className="grid gap-5">
+        {requests.length === 0 ? (
+          <div className="glass-panel p-8 text-center text-slate-400">
+            No requests sent yet.
+          </div>
+        ) : (
+          requests.map((request) => (
+            <article
+              key={request._id}
+              className="glass-card p-6"
+            >
+              <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                <div className="flex items-start gap-4">
+                  <img
+                    src={
+                      request.receiver.photoURL ||
+                      `https://ui-avatars.com/api/?name=${request.receiver.name}`
+                    }
+                    alt={request.receiver.name}
+                    className="avatar h-16 w-16"
+                  />
+                  <div>
+                    <h2 className="text-2xl font-black">
+                      {request.receiver.name}
+                    </h2>
+                    <p className="mt-1 text-cyan-200">
+                      {request.receiver.role || "Founder"}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-400">
+                      {request.receiver.email}
+                    </p>
+                    {request.startup?.title && (
+                      <p className="mt-3 text-sm text-amber-200">
+                        Startup: {request.startup.title}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <span
+                  className={
+                    statusClass[request.status] ||
+                    "chip"
+                  }
+                >
+                  {request.status}
+                </span>
+              </div>
+
+              <p className="mt-5 leading-7 text-slate-300">
+                {request.message || "Let's collaborate."}
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  to={`/founders/${request.receiver._id}`}
+                  className="btn btn-secondary"
+                >
+                  View Profile
+                </Link>
+
+                {request.status === "accepted" && (
+                  <Link
+                    to={`/chat/${request.receiver._id}`}
+                    className="btn btn-primary"
+                  >
+                    <FaComments />
+                    Message
+                  </Link>
+                )}
+              </div>
+            </article>
+          ))
+        )}
+      </section>
     </div>
   );
 }

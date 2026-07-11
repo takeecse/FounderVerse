@@ -192,6 +192,14 @@ const updateStartup = async (req, res) => {
       req.body.isHiring ??
       startup.isHiring;
 
+    startup.teamSize =
+      req.body.teamSize ??
+      startup.teamSize;
+
+    startup.logo =
+      req.body.logo ??
+      startup.logo;
+
     const updatedStartup =
       await startup.save();
 

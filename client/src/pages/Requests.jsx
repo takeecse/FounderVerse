@@ -1,177 +1,191 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  getReceivedRequests,
+  FaCheck,
+  FaComments,
+  FaHandshake,
+  FaXmark,
+} from "react-icons/fa6";
+import {
   acceptRequest,
+  getReceivedRequests,
   rejectRequest,
 } from "../api/requestApi";
+
+const statusClass = {
+  accepted: "chip chip-mint",
+  rejected: "chip chip-rose",
+  pending: "chip chip-amber",
+};
 
 function Requests() {
   const [requests, setRequests] = useState([]);
 
   const fetchRequests = async () => {
     try {
-      const res =
-        await getReceivedRequests();
-
+      const res = await getReceivedRequests();
       setRequests(res.data);
-
     } catch (error) {
       console.error(error);
     }
   };
 
   useEffect(() => {
-    fetchRequests();
+    const loadRequests = async () => {
+      try {
+        const res = await getReceivedRequests();
+        setRequests(res.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    loadRequests();
   }, []);
 
-  const handleAccept =
-    async (id) => {
-      try {
-        await acceptRequest(id);
-        fetchRequests();
-      } catch (error) {
-        console.error(error);
-      }
-    };
+  const handleAccept = async (id) => {
+    try {
+      await acceptRequest(id);
+      fetchRequests();
+    } catch (error) {
+      alert(
+        error.response?.data?.message ||
+          "Failed to accept request"
+      );
+    }
+  };
 
-  const handleReject =
-    async (id) => {
-      try {
-        await rejectRequest(id);
-        fetchRequests();
-      } catch (error) {
-        console.error(error);
-      }
-    };
+  const handleReject = async (id) => {
+    try {
+      await rejectRequest(id);
+      fetchRequests();
+    } catch (error) {
+      alert(
+        error.response?.data?.message ||
+          "Failed to reject request"
+      );
+    }
+  };
 
   return (
-    <div className="min-h-screen p-10">
-
-      <h1 className="text-5xl font-bold mb-8">
-        Collaboration Requests
-      </h1>
-
-      <div className="space-y-6">
-
-        {requests.length === 0 && (
-          <div className="bg-[#0B1225] p-8 rounded-2xl">
-            No requests yet.
-          </div>
-        )}
-
-        {requests.map((request) => (
-          <div
-            key={request._id}
-            className="
-            bg-[#0B1225]
-            p-6
-            rounded-3xl
-            border
-            border-white/10
-            "
-          >
-
-            <div className="flex items-center gap-4">
-
-              <img
-                src={
-                  request.sender.photoURL ||
-                  `https://ui-avatars.com/api/?name=${request.sender.name}`
-                }
-                alt=""
-                className="
-                w-16
-                h-16
-                rounded-full
-                border
-                border-cyan-500
-                "
-              />
-
-              <div>
-
-                <h2 className="text-2xl font-bold">
-                  {request.sender.name}
-                </h2>
-
-                <p className="text-cyan-400">
-                  {request.sender.role ||
-                    "Founder"}
-                </p>
-
-                <p className="text-gray-400">
-                  {request.sender.email}
-                </p>
-
-              </div>
-
-            </div>
-
-            <div className="mt-5">
-
-              <p className="text-gray-300">
-                {request.message ||
-                  "Let's collaborate."}
-              </p>
-
-            </div>
-
-            <div className="mt-5">
-
-              <span className="text-gray-400">
-                Status:
-              </span>
-
-              <span className="ml-2 text-cyan-400">
-                {request.status}
-              </span>
-
-            </div>
-
-            {request.status ===
-              "pending" && (
-              <div className="flex gap-4 mt-6">
-
-                <button
-                  onClick={() =>
-                    handleAccept(
-                      request._id
-                    )
-                  }
-                  className="
-                  bg-green-500
-                  px-5
-                  py-2
-                  rounded-xl
-                  "
-                >
-                  Accept
-                </button>
-
-                <button
-                  onClick={() =>
-                    handleReject(
-                      request._id
-                    )
-                  }
-                  className="
-                  bg-red-500
-                  px-5
-                  py-2
-                  rounded-xl
-                  "
-                >
-                  Reject
-                </button>
-
-              </div>
-            )}
-
-          </div>
-        ))}
-
+    <div className="page-shell">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Collaboration inbox</p>
+          <h1 className="page-title">
+            Requests
+          </h1>
+          <p className="page-subtitle">
+            Review collaboration requests and turn accepted
+            matches into direct conversations.
+          </p>
+        </div>
+        <span className="chip">
+          <FaHandshake />
+          {requests.length} total
+        </span>
       </div>
 
+      <section className="grid gap-5">
+        {requests.length === 0 ? (
+          <div className="glass-panel p-8 text-center text-slate-400">
+            No requests yet.
+          </div>
+        ) : (
+          requests.map((request) => (
+            <article
+              key={request._id}
+              className="glass-card p-6"
+            >
+              <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                <div className="flex items-start gap-4">
+                  <img
+                    src={
+                      request.sender.photoURL ||
+                      `https://ui-avatars.com/api/?name=${request.sender.name}`
+                    }
+                    alt={request.sender.name}
+                    className="avatar h-16 w-16"
+                  />
+                  <div>
+                    <h2 className="text-2xl font-black">
+                      {request.sender.name}
+                    </h2>
+                    <p className="mt-1 text-cyan-200">
+                      {request.sender.role || "Founder"}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-400">
+                      {request.sender.email}
+                    </p>
+                    {request.startup?.title && (
+                      <p className="mt-3 text-sm text-amber-200">
+                        Startup: {request.startup.title}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <span
+                  className={
+                    statusClass[request.status] ||
+                    "chip"
+                  }
+                >
+                  {request.status}
+                </span>
+              </div>
+
+              <p className="mt-5 leading-7 text-slate-300">
+                {request.message || "Let's collaborate."}
+              </p>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link
+                  to={`/founders/${request.sender._id}`}
+                  className="btn btn-secondary"
+                >
+                  View Profile
+                </Link>
+
+                {request.status === "accepted" && (
+                  <Link
+                    to={`/chat/${request.sender._id}`}
+                    className="btn btn-primary"
+                  >
+                    <FaComments />
+                    Message
+                  </Link>
+                )}
+
+                {request.status === "pending" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleAccept(request._id)
+                      }
+                      className="btn btn-success"
+                    >
+                      <FaCheck />
+                      Accept
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleReject(request._id)
+                      }
+                      className="btn btn-danger"
+                    >
+                      <FaXmark />
+                      Reject
+                    </button>
+                  </>
+                )}
+              </div>
+            </article>
+          ))
+        )}
+      </section>
     </div>
   );
 }

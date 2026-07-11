@@ -156,7 +156,9 @@ function Dashboard() {
               className="btn btn-primary"
             >
               <FaPlus />
-              New Startup
+              {stats.startupCount > 0
+                ? "New Startup"
+                : "Create Startup"}
             </Link>
           </div>
         </div>

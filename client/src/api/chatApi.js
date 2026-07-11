@@ -4,7 +4,8 @@ const API =
   "http://localhost:5000/api/chat";
 
 export const getConversation = (
-  userId
+  userId,
+  params = {}
 ) => {
   const token =
     localStorage.getItem("token");
@@ -12,6 +13,7 @@ export const getConversation = (
   return axios.get(
     `${API}/${userId}`,
     {
+      params,
       headers: {
         Authorization:
           `Bearer ${token}`,

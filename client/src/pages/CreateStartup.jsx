@@ -1,9 +1,20 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  FaArrowLeft,
+  FaRocket,
+} from "react-icons/fa6";
 import { createStartup } from "../api/startupApi";
-import { useNavigate } from "react-router-dom";
+
+const textToList = (value) =>
+  value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 
 function CreateStartup() {
   const navigate = useNavigate();
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     tagline: "",
@@ -27,10 +38,7 @@ function CreateStartup() {
 
     setFormData({
       ...formData,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : value,
+      [name]: type === "checkbox" ? checked : value,
     });
   };
 
@@ -38,148 +46,101 @@ function CreateStartup() {
     e.preventDefault();
 
     try {
+      setSaving(true);
       await createStartup({
-        title: formData.title,
-        tagline: formData.tagline,
-        description: formData.description,
-        industry: formData.industry,
-
+        ...formData,
         teamSize: Number(formData.teamSize),
-        logo: formData.logo,
-        website: formData.website,
-        location: formData.location,
-        stage: formData.stage,
-        fundingStatus:
-          formData.fundingStatus,
-        fundingNeeded:
-          formData.fundingNeeded,
-        isHiring: formData.isHiring,
-
-        techStack: formData.techStack
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-
-        lookingFor:
-          formData.lookingFor
-            .split(",")
-            .map((item) => item.trim())
-            .filter(Boolean),
+        techStack: textToList(formData.techStack),
+        lookingFor: textToList(formData.lookingFor),
       });
 
       navigate("/my-startups");
-
-      setFormData({
-        title: "",
-        tagline: "",
-        description: "",
-        industry: "",
-        techStack: "",
-        lookingFor: "",
-        website: "",
-        location: "",
-        stage: "Idea",
-        fundingStatus: "Bootstrapped",
-        fundingNeeded: "",
-        teamSize: 1,
-        logo: "",
-        isHiring: true,
-      });
-
     } catch (error) {
       alert(
         error.response?.data?.message ||
-        "Failed to create startup"
+          "Failed to create startup"
       );
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <div className="min-h-screen p-10">
-      <h1 className="text-5xl font-bold mb-8">
-        Create Startup
-      </h1>
+    <div className="page-shell">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">New venture</p>
+          <h1 className="page-title">
+            Create Startup
+          </h1>
+          <p className="page-subtitle">
+            Give collaborators the context they need to
+            understand your idea, traction, and team needs.
+          </p>
+        </div>
+        <Link
+          to="/my-startups"
+          className="btn btn-secondary"
+        >
+          <FaArrowLeft />
+          My Startups
+        </Link>
+      </div>
 
       <form
         onSubmit={handleSubmit}
-        className="
-        bg-[#0B1225]
-        p-8
-        rounded-2xl
-        max-w-4xl
-        "
+        className="glass-panel p-6 sm:p-8"
       >
-        <input
-          name="title"
-          placeholder="Startup Name"
-          value={formData.title}
-          onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800"
-        />
-
-        <input
-          name="tagline"
-          placeholder="Tagline"
-          value={formData.tagline}
-          onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800"
-        />
-
-        <textarea
-          name="description"
-          placeholder="Describe your startup..."
-          value={formData.description}
-          onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800 min-h-[140px]"
-        />
-
-        <input
-          name="industry"
-          placeholder="Industry"
-          value={formData.industry}
-          onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800"
-        />
-
-        <input
-          name="website"
-          placeholder="Website URL"
-          value={formData.website}
-          onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800"
-        />
-
-        <input
-          name="location"
-          placeholder="Location"
-          value={formData.location}
-          onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800"
-        />
-
-        <input
-          type="number"
-          name="teamSize"
-          placeholder="Current Team Size"
-          value={formData.teamSize}
-          onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800"
-        />
-
-        <input
-          name="logo"
-          placeholder="Logo URL"
-          value={formData.logo}
-          onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800"
-        />
-
-        <div className="grid md:grid-cols-2 gap-4 mb-4">
+        <div className="form-grid">
+          <input
+            name="title"
+            placeholder="Startup Name"
+            value={formData.title}
+            onChange={handleChange}
+            className="field"
+            required
+          />
+          <input
+            name="tagline"
+            placeholder="Tagline"
+            value={formData.tagline}
+            onChange={handleChange}
+            className="field"
+            required
+          />
+          <input
+            name="industry"
+            placeholder="Industry"
+            value={formData.industry}
+            onChange={handleChange}
+            className="field"
+          />
+          <input
+            name="location"
+            placeholder="Location"
+            value={formData.location}
+            onChange={handleChange}
+            className="field"
+          />
+          <input
+            name="website"
+            placeholder="Website URL"
+            value={formData.website}
+            onChange={handleChange}
+            className="field"
+          />
+          <input
+            name="logo"
+            placeholder="Logo URL"
+            value={formData.logo}
+            onChange={handleChange}
+            className="field"
+          />
           <select
             name="stage"
             value={formData.stage}
             onChange={handleChange}
-            className="p-4 rounded bg-gray-800"
+            className="select"
           >
             <option>Idea</option>
             <option>MVP</option>
@@ -187,12 +148,11 @@ function CreateStartup() {
             <option>Growth</option>
             <option>Scaling</option>
           </select>
-
           <select
             name="fundingStatus"
             value={formData.fundingStatus}
             onChange={handleChange}
-            className="p-4 rounded bg-gray-800"
+            className="select"
           >
             <option>Bootstrapped</option>
             <option>Angel Funded</option>
@@ -200,54 +160,65 @@ function CreateStartup() {
             <option>Series A</option>
             <option>Series B+</option>
           </select>
+          <input
+            type="number"
+            min="1"
+            name="teamSize"
+            placeholder="Current Team Size"
+            value={formData.teamSize}
+            onChange={handleChange}
+            className="field"
+          />
+          <input
+            name="fundingNeeded"
+            placeholder="Funding Needed"
+            value={formData.fundingNeeded}
+            onChange={handleChange}
+            className="field"
+          />
+          <input
+            name="techStack"
+            placeholder="Tech stack: React, Node, MongoDB"
+            value={formData.techStack}
+            onChange={handleChange}
+            className="field md:col-span-2"
+          />
+          <input
+            name="lookingFor"
+            placeholder="Looking for: Designer, Marketer, Investor"
+            value={formData.lookingFor}
+            onChange={handleChange}
+            className="field md:col-span-2"
+          />
         </div>
 
-        <input
-          name="fundingNeeded"
-          placeholder="Funding Needed (Optional)"
-          value={formData.fundingNeeded}
+        <textarea
+          name="description"
+          placeholder="Describe your startup..."
+          value={formData.description}
           onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800"
+          className="textarea mt-4"
+          required
         />
 
-        <input
-          name="techStack"
-          placeholder="React, Node.js, MongoDB"
-          value={formData.techStack}
-          onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800"
-        />
-
-        <input
-          name="lookingFor"
-          placeholder="Designer, Marketer, Backend Developer"
-          value={formData.lookingFor}
-          onChange={handleChange}
-          className="w-full p-4 mb-4 rounded bg-gray-800"
-        />
-
-        <label className="flex items-center gap-3 mb-6">
+        <label className="mt-5 flex items-center gap-3 text-sm font-bold text-slate-300">
           <input
             type="checkbox"
             name="isHiring"
             checked={formData.isHiring}
             onChange={handleChange}
+            className="h-5 w-5 accent-cyan-300"
           />
-          Currently Hiring Team Members
+          Currently hiring team members
         </label>
 
         <button
           type="submit"
-          className="
-          bg-cyan-500
-          px-8
-          py-3
-          rounded-xl
-          font-semibold
-          hover:bg-cyan-600
-          "
+          disabled={saving}
+          className="btn btn-primary mt-6"
         >
-          Create Startup
+          <FaRocket />
+          {saving ? "Creating..." : "Create Startup"}
         </button>
       </form>
     </div>

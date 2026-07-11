@@ -1,11 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  FaArrowRight,
+  FaMagnifyingGlass,
+  FaMoneyBillTrendUp,
+  FaUsers,
+} from "react-icons/fa6";
 import { getStartups } from "../api/startupApi";
 
 function Startups() {
   const [startups, setStartups] = useState([]);
   const [titleSearch, setTitleSearch] = useState("");
-  const [industrySearch, setIndustrySearch] = useState("");
+  const [industrySearch, setIndustrySearch] =
+    useState("");
   const [techSearch, setTechSearch] = useState("");
 
   useEffect(() => {
@@ -21,223 +28,167 @@ function Startups() {
     fetchStartups();
   }, []);
 
-  const filteredStartups = startups.filter(
-    (startup) => {
+  const filteredStartups = useMemo(
+    () =>
+      startups.filter((startup) => {
+        const matchesTitle = startup.title
+          ?.toLowerCase()
+          .includes(titleSearch.toLowerCase());
 
-      const matchesTitle =
-        startup.title
-          .toLowerCase()
-          .includes(
-            titleSearch.toLowerCase()
-          );
+        const matchesIndustry =
+          !industrySearch ||
+          startup.industry
+            ?.toLowerCase()
+            .includes(industrySearch.toLowerCase());
 
-      const matchesIndustry =
-        industrySearch === ""
-          ? true
-          : startup.industry
-            .toLowerCase()
-            .includes(
-              industrySearch.toLowerCase()
-            );
-
-      const matchesTech =
-        techSearch === ""
-          ? true
-          : startup.techStack.some((tech) =>
+        const matchesTech =
+          !techSearch ||
+          startup.techStack?.some((tech) =>
             tech
               .toLowerCase()
-              .includes(
-                techSearch.toLowerCase()
-              )
+              .includes(techSearch.toLowerCase())
           );
 
-      return (
-        matchesTitle &&
-        matchesIndustry &&
-        matchesTech
-      );
-    }
+        return (
+          matchesTitle && matchesIndustry && matchesTech
+        );
+      }),
+    [startups, titleSearch, industrySearch, techSearch]
   );
 
   return (
-    <div className="min-h-screen p-10">
-
-      <h1 className="text-5xl font-bold mb-8">
-        Browse Startups
-      </h1>
-
-      <div className="grid md:grid-cols-3 gap-4 mb-8">
-
-        <input
-          type="text"
-          placeholder="Search startup..."
-          value={titleSearch}
-          onChange={(e) =>
-            setTitleSearch(e.target.value)
-          }
-          className="p-3 rounded-xl bg-[#0B1225]"
-        />
-
-        <input
-          type="text"
-          placeholder="Industry..."
-          value={industrySearch}
-          onChange={(e) =>
-            setIndustrySearch(e.target.value)
-          }
-          className="p-3 rounded-xl bg-[#0B1225]"
-        />
-
-        <input
-          type="text"
-          placeholder="Tech Stack..."
-          value={techSearch}
-          onChange={(e) =>
-            setTechSearch(e.target.value)
-          }
-          className="p-3 rounded-xl bg-[#0B1225]"
-        />
-
+    <div className="page-shell page-wide">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Startup discovery</p>
+          <h1 className="page-title">
+            Browse Startups
+          </h1>
+          <p className="page-subtitle">
+            Find ventures by market, stage, tech stack, and
+            collaboration needs.
+          </p>
+        </div>
+        <span className="chip chip-mint">
+          {filteredStartups.length} startups
+        </span>
       </div>
 
-      <div className="grid gap-6">
+      <section className="glass-panel mb-8 grid gap-4 p-4 md:grid-cols-3">
+        {[
+          {
+            value: titleSearch,
+            setValue: setTitleSearch,
+            placeholder: "Search startup...",
+          },
+          {
+            value: industrySearch,
+            setValue: setIndustrySearch,
+            placeholder: "Industry...",
+          },
+          {
+            value: techSearch,
+            setValue: setTechSearch,
+            placeholder: "Tech stack...",
+          },
+        ].map((field) => (
+          <label
+            key={field.placeholder}
+            className="relative"
+          >
+            <FaMagnifyingGlass className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder={field.placeholder}
+              value={field.value}
+              onChange={(e) =>
+                field.setValue(e.target.value)
+              }
+              className="field pl-11"
+            />
+          </label>
+        ))}
+      </section>
 
+      <section className="grid gap-5">
         {filteredStartups.map((startup) => (
           <Link
             key={startup._id}
             to={`/startups/${startup._id}`}
-            className="
-    bg-[#0B1225]
-    p-6
-    rounded-3xl
-    block
-    hover:bg-[#111A35]
-    transition
-    border
-    border-white/5
-    hover:border-cyan-500/40
-    "
+            className="glass-card p-6"
           >
-            <div className="flex justify-between items-start">
-
-              <div className="flex items-center gap-4">
-
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div className="flex items-start gap-4">
                 <img
                   src={
                     startup.logo ||
                     `https://ui-avatars.com/api/?name=${startup.title}`
                   }
-                  alt=""
-                  className="w-14 h-14 rounded-xl"
+                  alt={startup.title}
+                  className="avatar h-16 w-16"
                 />
-
                 <div>
-                  <h2 className="text-2xl font-bold">
+                  <h2 className="text-3xl font-black">
                     {startup.title}
                   </h2>
-
-                  <p className="text-gray-400">
+                  <p className="mt-2 text-cyan-200">
                     {startup.tagline}
                   </p>
-
-                  <p className="mt-4 text-gray-400 line-clamp-2">
+                  <p className="mt-4 line-clamp-2 max-w-3xl leading-7 text-slate-400">
                     {startup.description}
                   </p>
                 </div>
-
               </div>
 
-              <span
-                className="
-        bg-cyan-500/20
-        text-cyan-400
-        px-3
-        py-1
-        rounded-full
-        text-sm
-        "
-              >
-                {startup.stage || "Idea"}
-              </span>
-
-            </div>
-
-            <div className="flex flex-wrap gap-2 mt-5">
-
-              <span className="bg-gray-800 px-3 py-1 rounded-full text-sm">
-                {startup.industry}
-              </span>
-
-              {startup.isHiring && (
-                <span
-                  className="
-          bg-green-500/20
-          text-green-400
-          px-3
-          py-1
-          rounded-full
-          text-sm
-          "
-                >
-                  Hiring
+              <div className="flex flex-wrap gap-2 md:justify-end">
+                <span className="chip">
+                  {startup.stage || "Idea"}
                 </span>
-              )}
-
-            </div>
-
-            <div className="flex flex-wrap gap-2 mt-4">
-
-              {startup.techStack
-                ?.slice(0, 4)
-                .map((tech) => (
-                  <span
-                    key={tech}
-                    className="
-            bg-purple-500/20
-            text-purple-300
-            px-3
-            py-1
-            rounded-full
-            text-sm
-            "
-                  >
-                    {tech}
+                {startup.isHiring && (
+                  <span className="chip chip-mint">
+                    Hiring
                   </span>
-                ))}
-
+                )}
+              </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-4 text-sm text-gray-400">
+            <div className="mt-6 flex flex-wrap gap-2">
+              {startup.industry && (
+                <span className="chip chip-amber">
+                  {startup.industry}
+                </span>
+              )}
+              {startup.techStack?.slice(0, 5).map((tech) => (
+                <span key={tech} className="chip">
+                  {tech}
+                </span>
+              ))}
+            </div>
 
-              <span>
-                Founder: {startup.founder?.name}
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5 text-sm text-slate-400">
+              <div className="flex flex-wrap gap-4">
+                <span>
+                  Founder: {startup.founder?.name || "Unknown"}
+                </span>
+                <span className="flex items-center gap-2">
+                  <FaUsers />
+                  {startup.teamSize || 1} members
+                </span>
+                {startup.fundingStatus && (
+                  <span className="flex items-center gap-2">
+                    <FaMoneyBillTrendUp />
+                    {startup.fundingStatus}
+                  </span>
+                )}
+              </div>
+              <span className="flex items-center gap-2 font-bold text-cyan-200">
+                View startup
+                <FaArrowRight />
               </span>
-
-              {startup.location && (
-                <span>
-                  📍 {startup.location}
-                </span>
-              )}
-
-              {startup.teamSize && (
-                <span>
-                  👥 {startup.teamSize} Members
-                </span>
-              )}
-
-              {startup.fundingStatus && (
-                <span>
-                  💰 {startup.fundingStatus}
-                </span>
-              )}
-
             </div>
-
           </Link>
         ))}
-
-      </div>
-
+      </section>
     </div>
   );
 }
