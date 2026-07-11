@@ -1,12 +1,9 @@
 import axios from "axios";
 
-const API =
-  "http://localhost:5000/api/dashboard";
+const API = `${import.meta.env.VITE_API_URL}/api/dashboard`;
 
-export const getDashboardStats =
-async () => {
-  const token =
-    localStorage.getItem("token");
+export const getDashboardStats = async () => {
+  const token = localStorage.getItem("token");
 
   return axios.get(API, {
     headers: {

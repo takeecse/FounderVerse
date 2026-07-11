@@ -1,11 +1,9 @@
 import axios from "axios";
 
-const API =
-  "http://localhost:5000/api/notifications";
+const API = `${import.meta.env.VITE_API_URL}/api/notifications`;
 
 export const getNotifications = () => {
-  const token =
-    localStorage.getItem("token");
+  const token = localStorage.getItem("token");
 
   return axios.get(API, {
     headers: {
@@ -15,8 +13,7 @@ export const getNotifications = () => {
 };
 
 export const markAllNotificationsRead = () => {
-  const token =
-    localStorage.getItem("token");
+  const token = localStorage.getItem("token");
 
   return axios.put(
     `${API}/read-all`,

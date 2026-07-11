@@ -1,31 +1,19 @@
 import axios from "axios";
 
-const API =
-  "http://localhost:5000/api/chat";
+const API = `${import.meta.env.VITE_API_URL}/api/chat`;
 
-export const getConversation = (
-  userId
-) => {
-  const token =
-    localStorage.getItem("token");
+export const getConversation = (userId) => {
+  const token = localStorage.getItem("token");
 
-  return axios.get(
-    `${API}/${userId}`,
-    {
-      headers: {
-        Authorization:
-          `Bearer ${token}`,
-      },
-    }
-  );
+  return axios.get(`${API}/${userId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 };
 
-export const sendMessage = (
-  receiverId,
-  message
-) => {
-  const token =
-    localStorage.getItem("token");
+export const sendMessage = (receiverId, message) => {
+  const token = localStorage.getItem("token");
 
   return axios.post(
     `${API}/send`,
@@ -35,24 +23,18 @@ export const sendMessage = (
     },
     {
       headers: {
-        Authorization:
-          `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     }
   );
 };
 
 export const getConversations = () => {
-  const token =
-    localStorage.getItem("token");
+  const token = localStorage.getItem("token");
 
-  return axios.get(
-    `${API}/conversations`,
-    {
-      headers: {
-        Authorization:
-          `Bearer ${token}`,
-      },
-    }
-  );
+  return axios.get(`${API}/conversations`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 };

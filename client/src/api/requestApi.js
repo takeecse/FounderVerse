@@ -1,18 +1,16 @@
 import axios from "axios";
 
-const API =
-  "http://localhost:5000/api/requests";
+const API = `${import.meta.env.VITE_API_URL}/api/requests`;
 
 export const sendRequest = async (
   receiverId,
   startupId,
   message
 ) => {
-  const token =
-    localStorage.getItem("token");
+  const token = localStorage.getItem("token");
 
   return axios.post(
-    "http://localhost:5000/api/requests",
+    API,
     {
       receiverId,
       startupId,
@@ -20,75 +18,56 @@ export const sendRequest = async (
     },
     {
       headers: {
-        Authorization:
-          `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     }
   );
 };
 
-export const getReceivedRequests =
-  async () => {
-    const token =
-      localStorage.getItem("token");
+export const getReceivedRequests = async () => {
+  const token = localStorage.getItem("token");
 
-    return axios.get(
-      `${API}/received`,
-      {
-        headers: {
-          Authorization:
-            `Bearer ${token}`,
-        },
-      }
-    );
-  };
+  return axios.get(`${API}/received`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
 
-export const getSentRequests =
-  async () => {
-    const token =
-      localStorage.getItem("token");
+export const getSentRequests = async () => {
+  const token = localStorage.getItem("token");
 
-    return axios.get(
-      `${API}/sent`,
-      {
-        headers: {
-          Authorization:
-            `Bearer ${token}`,
-        },
-      }
-    );
-  };
+  return axios.get(`${API}/sent`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
 
-export const acceptRequest =
-  async (id) => {
-    const token =
-      localStorage.getItem("token");
+export const acceptRequest = async (id) => {
+  const token = localStorage.getItem("token");
 
-    return axios.put(
-      `${API}/${id}/accept`,
-      {},
-      {
-        headers: {
-          Authorization:
-            `Bearer ${token}`,
-        },
-      }
-    );
-  };
+  return axios.put(
+    `${API}/${id}/accept`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+};
 
-export const rejectRequest =
-  async (id) => {
-    const token =
-      localStorage.getItem("token");
+export const rejectRequest = async (id) => {
+  const token = localStorage.getItem("token");
 
-    return axios.put(
-      `${API}/${id}/reject`,
-      {},
-      {
-        headers: {
-          Authorization:
-            `Bearer ${token}`,
-        },
-      }
-    );
-  };
+  return axios.put(
+    `${API}/${id}/reject`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+};

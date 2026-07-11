@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API = "http://localhost:5000/api/users";
+const API = `${import.meta.env.VITE_API_URL}/api/users`;
 
 export const getProfile = async () => {
   const token = localStorage.getItem("token");
@@ -27,26 +27,19 @@ export const updateProfile = async (profileData) => {
 };
 
 export const getAllUsers = async () => {
-  return axios.get(
-    "http://localhost:5000/api/users"
-  );
+  return axios.get(API);
 };
 
 export const getUserById = async (id) => {
-  return axios.get(
-    `http://localhost:5000/api/users/${id}`
-  );
+  return axios.get(`${API}/${id}`);
 };
 
 export const getConnections = async () => {
   const token = localStorage.getItem("token");
 
-  return axios.get(
-    `${API}/connections`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+  return axios.get(`${API}/connections`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 };
