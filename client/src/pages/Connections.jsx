@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  FaArrowRight,
+  FaComments,
+  FaUserGroup,
+} from "react-icons/fa6";
 import { getConnections } from "../api/userApi";
 
 function Connections() {
@@ -9,11 +14,8 @@ function Connections() {
   useEffect(() => {
     const fetchConnections = async () => {
       try {
-        const res =
-          await getConnections();
-
+        const res = await getConnections();
         setConnections(res.data);
-
       } catch (error) {
         console.error(error);
       }
@@ -23,69 +25,89 @@ function Connections() {
   }, []);
 
   return (
-    <div className="min-h-screen p-10">
-
-      <h1 className="text-5xl font-bold mb-8">
-        My Connections
-      </h1>
+    <div className="page-shell page-wide">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Trusted network</p>
+          <h1 className="page-title">
+            My Connections
+          </h1>
+          <p className="page-subtitle">
+            Accepted collaborations appear here so every message
+            starts from a trusted FounderVerse relationship.
+          </p>
+        </div>
+        <span className="chip chip-mint">
+          <FaUserGroup />
+          {connections.length} connected
+        </span>
+      </div>
 
       {connections.length === 0 ? (
-        <p>No connections yet.</p>
+        <section className="glass-panel p-8 text-center">
+          <h2 className="text-2xl font-black">
+            No connections yet
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-slate-400">
+            Browse founders, send collaboration requests, and
+            accepted founders will show up here.
+          </p>
+          <Link
+            to="/founders"
+            className="btn btn-primary mt-6"
+          >
+            Browse Founders
+            <FaArrowRight />
+          </Link>
+        </section>
       ) : (
-        <div className="grid gap-6">
-
+        <section className="card-grid">
           {connections.map((user) => (
             <div
               key={user._id}
-              className="bg-[#0B1225] p-6 rounded-2xl"
+              className="glass-card p-6"
             >
               <div className="flex items-center gap-4">
-
                 <img
                   src={
                     user.photoURL ||
                     `https://ui-avatars.com/api/?name=${user.name}`
                   }
-                  alt=""
-                  className="w-14 h-14 rounded-full"
+                  alt={user.name}
+                  className="avatar h-16 w-16"
                 />
-
                 <div>
-                  <h2 className="text-xl font-bold">
+                  <h2 className="text-2xl font-black">
                     {user.name}
                   </h2>
-
-                  <p className="text-gray-400">
+                  <p className="mt-1 text-cyan-200">
                     {user.role || "Founder"}
                   </p>
+                  <p className="text-sm text-slate-400">
+                    {user.location || "Remote"}
+                  </p>
                 </div>
-
               </div>
 
-              <div className="flex gap-3 mt-5">
-
+              <div className="mt-6 flex flex-wrap gap-3">
                 <Link
                   to={`/founders/${user._id}`}
-                  className="bg-cyan-500 px-4 py-2 rounded-lg"
+                  className="btn btn-secondary"
                 >
                   View Profile
                 </Link>
-
                 <Link
                   to={`/chat/${user._id}`}
-                  className="bg-green-600 px-4 py-2 rounded-lg"
+                  className="btn btn-primary"
                 >
+                  <FaComments />
                   Message
                 </Link>
-
               </div>
-
             </div>
           ))}
-
-        </div>
+        </section>
       )}
-
     </div>
   );
 }

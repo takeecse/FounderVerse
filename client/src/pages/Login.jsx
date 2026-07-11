@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   GoogleAuthProvider,
+  reload,
+  sendEmailVerification,
   signInWithEmailAndPassword,
   signInWithPopup,
 } from "firebase/auth";
@@ -14,17 +16,59 @@ import { FaGoogle } from "react-icons/fa";
 import { firebaseLogin } from "../api/authApi";
 import { auth } from "../firebase";
 
+const getFriendlyAuthError = (error) => {
+  const code = error?.code;
+
+  if (code === "auth/invalid-credential") {
+    return "Invalid email or password.";
+  }
+
+  if (code === "auth/user-not-found") {
+    return "No account found with this email.";
+  }
+
+  if (code === "auth/wrong-password") {
+    return "Invalid password.";
+  }
+
+  if (code === "auth/popup-closed-by-user") {
+    return "Google login was closed before it finished.";
+  }
+
+  if (
+    code === "auth/account-exists-with-different-credential"
+  ) {
+    return "An account already exists with this email using another sign-in method.";
+  }
+
+  return (
+    error?.response?.data?.message ||
+    error?.message ||
+    "Login failed"
+  );
+};
+
 function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo =
-    location.state?.from || "/dashboard";
+    location.state?.from || "/";
+  const safeRedirectTo = [
+    "/login",
+    "/register",
+    "/complete-profile",
+  ].includes(redirectTo)
+    ? "/"
+    : redirectTo;
 
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [loading, setLoading] = useState(false);
+  const [verificationUser, setVerificationUser] =
+    useState(null);
+  const [notice, setNotice] = useState("");
 
   const handleChange = (e) => {
     setFormData({
@@ -34,7 +78,10 @@ function Login() {
   };
 
   const createSession = async (firebaseUser) => {
-    const idToken = await firebaseUser.getIdToken();
+    await reload(firebaseUser);
+
+    const idToken =
+      await firebaseUser.getIdToken(true);
     const res = await firebaseLogin({
       idToken,
       name: firebaseUser.displayName,
@@ -42,11 +89,22 @@ function Login() {
 
     localStorage.setItem("token", res.data.token);
     window.dispatchEvent(new Event("storage"));
-    navigate(redirectTo);
+
+    if (!res.data.user?.profileCompleted) {
+      navigate("/complete-profile", {
+        replace: true,
+        state: { from: safeRedirectTo },
+      });
+      return;
+    }
+
+    navigate(safeRedirectTo, { replace: true });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setNotice("");
+    setVerificationUser(null);
 
     try {
       setLoading(true);
@@ -57,25 +115,35 @@ function Login() {
           formData.password
         );
 
+      await reload(credential.user);
+
       if (!credential.user.emailVerified) {
-        alert(
-          "Please verify your email before logging in."
+        setVerificationUser(credential.user);
+        setNotice(
+          "Please verify your email before logging in. Check your inbox for the verification link."
         );
         return;
       }
 
       await createSession(credential.user);
     } catch (error) {
-      alert(error.message || "Login failed");
+      alert(getFriendlyAuthError(error));
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setNotice("");
+    setVerificationUser(null);
+
     try {
       setLoading(true);
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: "select_account",
+      });
+
       const result = await signInWithPopup(
         auth,
         provider
@@ -83,9 +151,33 @@ function Login() {
 
       await createSession(result.user);
     } catch (error) {
-      alert(error.message || "Google login failed");
+      alert(getFriendlyAuthError(error));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      const user = verificationUser || auth.currentUser;
+
+      if (!user) {
+        setNotice(
+          "Please enter your email and password again before resending verification."
+        );
+        return;
+      }
+
+      await sendEmailVerification(user, {
+        url: `${window.location.origin}/login`,
+        handleCodeInApp: false,
+      });
+
+      setNotice(
+        "Verification email sent again. After verifying, come back and log in."
+      );
+    } catch (error) {
+      alert(getFriendlyAuthError(error));
     }
   };
 
@@ -114,6 +206,21 @@ function Login() {
           <p className="mt-2 text-sm text-slate-400">
             Access your FounderVerse workspace.
           </p>
+
+          {notice && (
+            <div className="mt-5 rounded-lg border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
+              <p>{notice}</p>
+              {verificationUser && (
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  className="mt-3 font-black text-cyan-100 underline"
+                >
+                  Resend verification email
+                </button>
+              )}
+            </div>
+          )}
 
           <label className="mt-8 block">
             <span className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-300">

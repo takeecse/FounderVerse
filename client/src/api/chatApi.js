@@ -2,14 +2,22 @@ import axios from "axios";
 
 const API = `${import.meta.env.VITE_API_URL}/api/chat`;
 
-export const getConversation = (userId) => {
-  const token = localStorage.getItem("token");
+export const getConversation = (
+  userId,
+  params = {}
+) => {
+  const token =
+    localStorage.getItem("token");
 
-  return axios.get(`${API}/${userId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return axios.get(
+    `${API}/${userId}`,
+    {
+      params,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 };
 
 export const sendMessage = (receiverId, message) => {
@@ -32,9 +40,12 @@ export const sendMessage = (receiverId, message) => {
 export const getConversations = () => {
   const token = localStorage.getItem("token");
 
-  return axios.get(`${API}/conversations`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  return axios.get(
+    `${API}/conversations`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 };

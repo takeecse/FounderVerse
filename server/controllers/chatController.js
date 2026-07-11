@@ -10,9 +10,20 @@ const serializeMessage = (chat) => ({
   sender: chat.sender.toString(),
   receiver: chat.receiver.toString(),
   message: chat.message,
+  isRead: chat.isRead,
   createdAt: chat.createdAt,
   updatedAt: chat.updatedAt,
 });
+
+const getPageLimit = (value) => {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 50;
+  }
+
+  return Math.min(parsed, 100);
+};
 
 const sendMessage = async (req, res) => {
   try {
@@ -53,6 +64,7 @@ const sendMessage = async (req, res) => {
       sender: req.user.id,
       receiver: receiverId,
       message: cleanMessage,
+      isRead: false,
     });
 
     const payload = serializeMessage(chat);
@@ -81,7 +93,24 @@ const getConversation = async (req, res) => {
       });
     }
 
-    const messages = await Chat.find({
+    if (req.params.userId === req.user.id) {
+      return res.status(400).json({
+        message: "You cannot open a conversation with yourself",
+      });
+    }
+
+    const readResult = await Chat.updateMany(
+      {
+        sender: req.params.userId,
+        receiver: req.user.id,
+        isRead: { $ne: true },
+      },
+      {
+        isRead: true,
+      }
+    );
+
+    const baseQuery = {
       $or: [
         {
           sender: req.user.id,
@@ -92,18 +121,55 @@ const getConversation = async (req, res) => {
           receiver: req.user.id,
         },
       ],
-    })
-      .sort({ createdAt: 1 })
+    };
+
+    const limit = getPageLimit(req.query.limit);
+    const beforeDate = req.query.before
+      ? new Date(req.query.before)
+      : null;
+
+    const pagedQuery =
+      beforeDate && !Number.isNaN(beforeDate.getTime())
+        ? {
+            ...baseQuery,
+            createdAt: {
+              $lt: beforeDate,
+            },
+          }
+        : baseQuery;
+
+    const messages = await Chat.find(pagedQuery)
+      .sort({ createdAt: -1 })
+      .limit(limit + 1)
       .lean();
 
-    res.json(
-      messages.map((message) => ({
+    const hasMore = messages.length > limit;
+    const pageMessages = messages
+      .slice(0, limit)
+      .reverse()
+      .map((message) => ({
         ...message,
         _id: message._id.toString(),
         sender: message.sender.toString(),
         receiver: message.receiver.toString(),
-      }))
-    );
+        isRead: message.isRead,
+      }));
+
+    if (readResult.modifiedCount > 0) {
+      const io = req.app.get("io");
+
+      if (io) {
+        io.to(`user:${req.user.id}`).emit("messages_read", {
+          conversationUserId: req.params.userId,
+        });
+      }
+    }
+
+    res.json({
+      messages: pageMessages,
+      hasMore,
+      nextCursor: pageMessages[0]?.createdAt || null,
+    });
 
   } catch (error) {
     res.status(500).json({
@@ -114,58 +180,82 @@ const getConversation = async (req, res) => {
 
 const getConversations = async (req, res) => {
   try {
+    const userObjectId = new mongoose.Types.ObjectId(
+      req.user.id
+    );
 
-    const chats = await Chat.find({
-      $or: [
-        { sender: req.user.id },
-        { receiver: req.user.id },
-      ],
-    })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    const latestByUser = new Map();
-
-    chats.forEach((chat) => {
-      const otherUserId =
-        chat.sender.toString() === req.user.id
-          ? chat.receiver.toString()
-          : chat.sender.toString();
-
-      if (!latestByUser.has(otherUserId)) {
-        latestByUser.set(otherUserId, chat);
-      }
-
-    });
+    const summaries = await Chat.aggregate([
+      {
+        $match: {
+          $or: [
+            { sender: userObjectId },
+            { receiver: userObjectId },
+          ],
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ["$sender", userObjectId] },
+              "$receiver",
+              "$sender",
+            ],
+          },
+          lastMessage: { $first: "$message" },
+          lastMessageAt: { $first: "$createdAt" },
+          unreadCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$receiver", userObjectId] },
+                    { $ne: ["$isRead", true] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+      { $sort: { lastMessageAt: -1 } },
+    ]);
 
     const users = await User.find({
       _id: {
-        $in: [...latestByUser.keys()],
+        $in: summaries.map((summary) => summary._id),
       },
     })
       .select("name email photoURL role location")
       .lean();
 
-    const conversations = users.map((user) => {
-      const latestMessage = latestByUser.get(
-        user._id.toString()
-      );
+    const userById = new Map(
+      users.map((user) => [
+        user._id.toString(),
+        user,
+      ])
+    );
+
+    const conversations = summaries.flatMap((summary) => {
+      const user = userById.get(summary._id.toString());
+
+      if (!user) {
+        return [];
+      }
 
       return {
         ...user,
         _id: user._id.toString(),
-        lastMessage: latestMessage?.message || "",
-        lastMessageAt: latestMessage?.createdAt || null,
+        lastMessage: summary.lastMessage || "",
+        lastMessageAt: summary.lastMessageAt || null,
+        unreadCount: summary.unreadCount || 0,
       };
     });
 
-    res.json(
-      conversations.sort(
-        (a, b) =>
-          new Date(b.lastMessageAt || 0) -
-          new Date(a.lastMessageAt || 0)
-      )
-    );
+    res.json(conversations);
 
   } catch (error) {
     res.status(500).json({

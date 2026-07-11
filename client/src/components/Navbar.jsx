@@ -1,16 +1,23 @@
-import { useEffect, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Link,
+  NavLink,
+  useNavigate,
+} from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
   FaArrowRightFromBracket,
   FaBars,
   FaBell,
+  FaComments,
   FaRocket,
   FaUser,
-  FaXmark,
 } from "react-icons/fa6";
 import { auth } from "../firebase";
 import { clearSession, isAuthenticated } from "../utils/session";
+import { getProfile } from "../api/userApi";
+import { getConversations } from "../api/chatApi";
+import socket, { connectSocket } from "../socket";
 
 const publicLinks = [
   { to: "/startups", label: "Startups" },
@@ -19,7 +26,6 @@ const publicLinks = [
 
 const privateLinks = [
   { to: "/dashboard", label: "Dashboard" },
-  { to: "/connections", label: "Connections" },
   { to: "/requests", label: "Requests" },
 ];
 
@@ -27,10 +33,38 @@ function Navbar() {
   const navigate = useNavigate();
   const [firebaseUser, setFirebaseUser] =
     useState(null);
+  const [profile, setProfile] = useState(null);
+  const [unreadChats, setUnreadChats] = useState(0);
   const [loggedIn, setLoggedIn] = useState(
     isAuthenticated()
   );
   const [open, setOpen] = useState(false);
+
+  const loadPrivateNavData = useCallback(async () => {
+    if (!isAuthenticated()) {
+      setProfile(null);
+      setUnreadChats(0);
+      return;
+    }
+
+    try {
+      const [profileRes, conversationsRes] =
+        await Promise.all([
+          getProfile(),
+          getConversations(),
+        ]);
+
+      setProfile(profileRes.data);
+      setUnreadChats(
+        conversationsRes.data.reduce(
+          (total, item) => total + (item.unreadCount || 0),
+          0
+        )
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(
@@ -38,15 +72,26 @@ function Navbar() {
       (user) => {
         setFirebaseUser(user);
         setLoggedIn(isAuthenticated());
+        loadPrivateNavData();
       }
     );
 
-    const syncSession = () =>
+    const syncSession = () => {
       setLoggedIn(isAuthenticated());
+      loadPrivateNavData();
+    };
 
     window.addEventListener(
       "storage",
       syncSession
+    );
+    window.addEventListener(
+      "founderverse:profile-updated",
+      loadPrivateNavData
+    );
+    window.addEventListener(
+      "founderverse:chat-updated",
+      loadPrivateNavData
     );
 
     return () => {
@@ -55,8 +100,34 @@ function Navbar() {
         "storage",
         syncSession
       );
+      window.removeEventListener(
+        "founderverse:profile-updated",
+        loadPrivateNavData
+      );
+      window.removeEventListener(
+        "founderverse:chat-updated",
+        loadPrivateNavData
+      );
     };
-  }, []);
+  }, [loadPrivateNavData]);
+
+  useEffect(() => {
+    if (!loggedIn) return undefined;
+
+    connectSocket();
+
+    const refreshChatBadge = () => {
+      loadPrivateNavData();
+    };
+
+    socket.on("receive_message", refreshChatBadge);
+    socket.on("messages_read", refreshChatBadge);
+
+    return () => {
+      socket.off("receive_message", refreshChatBadge);
+      socket.off("messages_read", refreshChatBadge);
+    };
+  }, [loggedIn, loadPrivateNavData]);
 
   const closeMenu = () => setOpen(false);
 
@@ -64,12 +135,14 @@ function Navbar() {
     await signOut(auth).catch(() => {});
     clearSession();
     setLoggedIn(false);
+    setProfile(null);
+    setUnreadChats(0);
     closeMenu();
     navigate("/");
   };
 
   const navClass = ({ isActive }) =>
-    `rounded-full px-4 py-2 text-sm font-bold transition ${
+    `inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition ${
       isActive
         ? "bg-white/10 text-cyan-200"
         : "text-slate-300 hover:bg-white/10 hover:text-white"
@@ -87,7 +160,7 @@ function Navbar() {
           onClick={closeMenu}
           className="flex items-center gap-3"
         >
-          <span className="grid h-10 w-10 place-items-center rounded-lg border border-cyan-300/30 bg-cyan-300/12 text-cyan-200 shadow-lg shadow-cyan-950/40">
+          <span className="grid h-10 w-10 place-items-center rounded-lg border border-cyan-300/30 bg-cyan-300/10 text-cyan-200 shadow-lg shadow-cyan-950/40">
             <FaRocket />
           </span>
           <span className="text-xl font-black tracking-normal">
@@ -113,35 +186,79 @@ function Navbar() {
         <div className="hidden items-center gap-3 lg:flex">
           {loggedIn ? (
             <>
-              <Link
-                to="/notifications"
-                className="btn btn-secondary icon-btn"
-                title="Notifications"
+              <div
+                id="desktop-account-navigation"
+                className={`flex items-center gap-3 overflow-hidden transition-all duration-200 ease-out ${
+                  open
+                    ? "max-w-0 opacity-0"
+                    : "max-w-[560px] opacity-100"
+                }`}
               >
-                <FaBell />
-              </Link>
-              <Link
-                to="/profile"
-                className="btn btn-secondary"
-              >
-                {firebaseUser?.photoURL ? (
-                  <img
-                    src={firebaseUser.photoURL}
-                    alt={firebaseUser.displayName || "Profile"}
-                    className="h-7 w-7 rounded-md object-cover"
-                  />
-                ) : (
-                  <FaUser />
-                )}
-                Profile
-              </Link>
+                <Link
+                  to="/chat"
+                  className="btn btn-secondary relative whitespace-nowrap"
+                  title="Chat"
+                >
+                  <FaComments />
+                  Chat
+                  {unreadChats > 0 && (
+                    <span className="absolute -right-2 -top-2 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[11px] font-black text-white">
+                      {unreadChats}
+                    </span>
+                  )}
+                </Link>
+                <Link
+                  to="/notifications"
+                  className="btn btn-secondary icon-btn"
+                  title="Notifications"
+                >
+                  <FaBell />
+                </Link>
+                <Link
+                  to="/profile"
+                  className="btn btn-secondary whitespace-nowrap"
+                >
+                  {profile?.photoURL || firebaseUser?.photoURL ? (
+                    <img
+                      src={
+                        profile?.photoURL ||
+                        firebaseUser.photoURL
+                      }
+                      alt={
+                        profile?.name ||
+                        firebaseUser.displayName ||
+                        "Profile"
+                      }
+                      className="h-7 w-7 rounded-md object-cover"
+                    />
+                  ) : (
+                    <FaUser />
+                  )}
+                  Profile
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="btn btn-secondary icon-btn"
+                  title="Log out"
+                >
+                  <FaArrowRightFromBracket />
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={handleLogout}
-                className="btn btn-secondary icon-btn"
-                title="Log out"
+                onClick={() => setOpen((value) => !value)}
+                className="btn btn-secondary icon-btn relative"
+                title="Toggle account navigation"
+                aria-expanded={!open}
+                aria-controls="desktop-account-navigation"
               >
-                <FaArrowRightFromBracket />
+                <FaBars />
+                {open && unreadChats > 0 && (
+                  <span className="absolute -right-2 -top-2 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[11px] font-black text-white">
+                    {unreadChats}
+                  </span>
+                )}
               </button>
             </>
           ) : (
@@ -165,15 +282,23 @@ function Navbar() {
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="btn btn-secondary icon-btn lg:hidden"
+          className="nav-toggle nav-toggle-mobile"
           title="Toggle navigation"
+          aria-expanded={open}
+          aria-controls="mobile-navigation"
         >
-          {open ? <FaXmark /> : <FaBars />}
+          <FaBars />
         </button>
       </div>
 
-      {open && (
-        <div className="glass-panel mx-auto mt-3 flex max-w-7xl flex-col gap-2 p-3 lg:hidden">
+      <div
+        id="mobile-navigation"
+        className={`glass-panel mx-auto flex max-w-7xl flex-col gap-2 overflow-hidden p-3 transition-all duration-200 ease-out lg:hidden ${
+          open
+            ? "mt-3 max-h-[720px] opacity-100"
+            : "max-h-0 border-transparent py-0 opacity-0"
+        }`}
+      >
           <NavLink
             to="/"
             onClick={closeMenu}
@@ -193,6 +318,18 @@ function Navbar() {
           ))}
           {loggedIn ? (
             <>
+              <NavLink
+                to="/chat"
+                onClick={closeMenu}
+                className={navClass}
+              >
+                Chat
+                {unreadChats > 0 && (
+                  <span className="ml-2 rounded-full bg-rose-500 px-2 py-0.5 text-xs text-white">
+                    {unreadChats}
+                  </span>
+                )}
+              </NavLink>
               <NavLink
                 to="/profile"
                 onClick={closeMenu}
@@ -234,8 +371,7 @@ function Navbar() {
               </Link>
             </div>
           )}
-        </div>
-      )}
+      </div>
     </nav>
   );
 }

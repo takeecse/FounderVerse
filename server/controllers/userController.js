@@ -1,5 +1,36 @@
 const User = require("../models/User");
 
+const REQUIRED_PROFILE_FIELDS = [
+  "name",
+  "role",
+  "location",
+  "bio",
+  "skills",
+  "interests",
+  "lookingFor",
+];
+
+const cleanText = (value) =>
+  typeof value === "string" ? value.trim() : "";
+
+const cleanList = (value) =>
+  Array.isArray(value)
+    ? value
+        .map((item) => cleanText(item))
+        .filter(Boolean)
+    : [];
+
+const getMissingProfileFields = (user) =>
+  REQUIRED_PROFILE_FIELDS.filter((field) => {
+    const value = user[field];
+
+    if (Array.isArray(value)) {
+      return value.length === 0;
+    }
+
+    return !cleanText(value);
+  });
+
 const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -22,28 +53,81 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    user.bio = req.body.bio ?? user.bio;
-    user.github = req.body.github ?? user.github;
-    user.linkedin = req.body.linkedin ?? user.linkedin;
-    user.skills = req.body.skills ?? user.skills;
+    if (req.body.name !== undefined) {
+      user.name = cleanText(req.body.name);
+    }
 
-    user.role = req.body.role ?? user.role;
-    user.location = req.body.location ?? user.location;
-    user.interests =
-      req.body.interests ?? user.interests;
+    if (req.body.bio !== undefined) {
+      user.bio = cleanText(req.body.bio);
+    }
 
-    user.lookingFor =
-      req.body.lookingFor ?? user.lookingFor;
+    user.github =
+      req.body.github !== undefined
+        ? cleanText(req.body.github)
+        : user.github;
+
+    user.linkedin =
+      req.body.linkedin !== undefined
+        ? cleanText(req.body.linkedin)
+        : user.linkedin;
+
+    if (req.body.skills !== undefined) {
+      user.skills = cleanList(req.body.skills);
+    }
+
+    if (req.body.role !== undefined) {
+      user.role = cleanText(req.body.role);
+    }
+
+    if (req.body.location !== undefined) {
+      user.location = cleanText(req.body.location);
+    }
+
+    if (req.body.interests !== undefined) {
+      user.interests = cleanList(req.body.interests);
+    }
+
+    if (req.body.lookingFor !== undefined) {
+      user.lookingFor = cleanList(req.body.lookingFor);
+    }
 
     user.portfolio =
-      req.body.portfolio ?? user.portfolio;
+      req.body.portfolio !== undefined
+        ? cleanText(req.body.portfolio)
+        : user.portfolio;
 
-    user.photoURL =
-      req.body.photoURL ?? user.photoURL;
+    if (req.body.photoURL !== undefined) {
+      const nextPhotoURL = req.body.photoURL;
+      const canUsePhoto =
+        typeof nextPhotoURL === "string" &&
+        (nextPhotoURL === "" ||
+          nextPhotoURL === user.photoURL ||
+          nextPhotoURL.startsWith("data:image/"));
+
+      if (!canUsePhoto) {
+        return res.status(400).json({
+          message:
+            "Profile photo must be uploaded instead of pasted as a URL",
+        });
+      }
+
+      user.photoURL = nextPhotoURL;
+    }
+
+    const missingFields = getMissingProfileFields(user);
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        message: `Please complete required profile fields: ${missingFields.join(
+          ", "
+        )}`,
+        missingFields,
+      });
+    }
 
     user.profileCompleted = true;
 
-    const updatedUser = await user.save();
+    await user.save();
 
     const userResponse = await User.findById(
       req.user.id

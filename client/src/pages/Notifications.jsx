@@ -1,83 +1,88 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { FaBell, FaCheck } from "react-icons/fa6";
 import {
-    getNotifications,
-    markAllNotificationsRead,
+  getNotifications,
+  markAllNotificationsRead,
 } from "../api/notificationApi";
 
 function Notifications() {
-    const [notifications, setNotifications] =
-        useState([]);
+  const [notifications, setNotifications] =
+    useState([]);
 
-    useEffect(() => {
-        const fetchNotifications =
-            async () => {
-                try {
-                    const res =
-                        await getNotifications();
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await getNotifications();
+        setNotifications(res.data);
+        await markAllNotificationsRead();
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
-                    setNotifications(res.data);
+    fetchNotifications();
+  }, []);
 
-                } catch (error) {
-                    console.error(error);
-                }
-            };
-
-        fetchNotifications();
-
-        const markRead = async () => {
-            try {
-                await markAllNotificationsRead();
-            } catch (error) {
-                console.error(error);
-            }
-        };
-
-        markRead();
-    }, []);
-
-    return (
-        <div className="min-h-screen p-10">
-
-            <h1 className="text-5xl font-bold mb-8">
-                Notifications
-            </h1>
-
-            {notifications.length === 0 ? (
-                <p>No notifications</p>
-            ) : (
-                <div className="space-y-4">
-
-                    {notifications.map((n) => (
-                        <div
-                            key={n._id}
-                            className="
-bg-[#0B1225]
-p-6
-rounded-3xl
-border
-border-white/10
-hover:border-cyan-500/40
-transition
-"
-                        >
-                            <h2 className="font-bold text-xl">
-                                {n.title}
-                            </h2>
-
-                            <p className="text-gray-400 mt-2">
-                                {n.message}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-3">
-                                {new Date(n.createdAt).toLocaleString()}
-                            </p>
-                        </div>
-                    ))}
-
-                </div>
-            )}
-
+  return (
+    <div className="page-shell">
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">Founder signals</p>
+          <h1 className="page-title">
+            Notifications
+          </h1>
+          <p className="page-subtitle">
+            Track collaboration requests, accepted matches, and
+            updates tied to your account.
+          </p>
         </div>
-    );
+        <Link to="/dashboard" className="btn btn-secondary">
+          Dashboard
+        </Link>
+      </div>
+
+      {notifications.length === 0 ? (
+        <section className="glass-panel p-8 text-center">
+          <FaBell className="mx-auto text-3xl text-cyan-200" />
+          <h2 className="mt-4 text-2xl font-black">
+            No notifications
+          </h2>
+          <p className="mt-2 text-slate-400">
+            New request and connection activity will appear here.
+          </p>
+        </section>
+      ) : (
+        <section className="grid gap-4">
+          {notifications.map((item) => (
+            <article
+              key={item._id}
+              className="glass-card p-6"
+            >
+              <div className="flex items-start gap-4">
+                <div className="grid h-11 w-11 place-items-center rounded-lg border border-cyan-300/30 bg-cyan-300/10 text-cyan-200">
+                  <FaCheck />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black">
+                    {item.title}
+                  </h2>
+                  <p className="mt-2 leading-6 text-slate-400">
+                    {item.message}
+                  </p>
+                  <p className="mt-3 text-xs font-bold uppercase tracking-widest text-slate-500">
+                    {new Date(
+                      item.createdAt
+                    ).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+    </div>
+  );
 }
 
 export default Notifications;

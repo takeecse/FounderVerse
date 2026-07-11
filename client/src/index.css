@@ -256,6 +256,38 @@ button:disabled {
   padding: 0;
 }
 
+.nav-toggle {
+  display: inline-flex;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 800;
+  line-height: 1;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.nav-toggle:hover {
+  transform: translateY(-2px);
+}
+
+@media (min-width: 1024px) {
+  .nav-toggle-mobile {
+    display: none;
+  }
+}
+
 .field,
 .textarea,
 .select {
@@ -410,5 +442,10 @@ button:disabled {
 
   .btn {
     width: 100%;
+  }
+
+  .btn.icon-btn {
+    width: 44px;
+    min-width: 44px;
   }
 }

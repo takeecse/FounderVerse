@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   FaArrowUpRightFromSquare,
+  FaBullseye,
+  FaCheck,
   FaGithub,
   FaLinkedin,
   FaLocationDot,
@@ -9,10 +12,14 @@ import {
   FaStar,
 } from "react-icons/fa6";
 import { getProfile } from "../api/userApi";
+import { auth } from "../firebase";
 import { normalizeExternalUrl } from "../utils/links";
 
 function Profile() {
   const [user, setUser] = useState(null);
+  const [googlePhotoURL, setGooglePhotoURL] = useState(
+    auth.currentUser?.photoURL || ""
+  );
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -25,6 +32,14 @@ function Profile() {
     };
 
     fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setGooglePhotoURL(currentUser?.photoURL || "");
+    });
+
+    return unsubscribe;
   }, []);
 
   if (!user) {
@@ -52,6 +67,20 @@ function Profile() {
       icon: <FaArrowUpRightFromSquare />,
     },
   ].filter((link) => link.value);
+
+  const completionItems = [
+    user.photoURL || googlePhotoURL,
+    user.role,
+    user.location,
+    user.bio,
+    user.skills?.length,
+    user.lookingFor?.length,
+    links.length,
+  ];
+  const completedCount = completionItems.filter(Boolean).length;
+  const completionPercent = Math.round(
+    (completedCount / completionItems.length) * 100
+  );
 
   return (
     <div className="page-shell">
@@ -81,6 +110,7 @@ function Profile() {
           <img
             src={
               user.photoURL ||
+              googlePhotoURL ||
               `https://ui-avatars.com/api/?name=${user.name}`
             }
             alt={user.name}
@@ -94,6 +124,9 @@ function Profile() {
               <span className="chip chip-mint">
                 <FaStar />
                 Score {user.executionScore}
+              </span>
+              <span className="chip">
+                {completionPercent}% complete
               </span>
             </div>
             <p className="mt-2 text-xl text-cyan-200">
@@ -112,6 +145,37 @@ function Profile() {
           </h3>
           <p className="mt-3 max-w-3xl leading-7 text-slate-300">
             {user.bio || "No bio added yet."}
+          </p>
+        </div>
+      </section>
+
+      <section className="two-grid mt-6">
+        <div className="glass-card p-6">
+          <h3 className="flex items-center gap-2 text-2xl font-black">
+            <FaCheck className="text-emerald-200" />
+            Profile Strength
+          </h3>
+          <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300"
+              style={{ width: `${completionPercent}%` }}
+            />
+          </div>
+          <p className="mt-4 text-sm leading-6 text-slate-400">
+            Complete profiles help founders understand your fit
+            before they send requests or start a chat.
+          </p>
+        </div>
+
+        <div className="glass-card p-6">
+          <h3 className="flex items-center gap-2 text-2xl font-black">
+            <FaBullseye className="text-cyan-200" />
+            Collaboration Focus
+          </h3>
+          <p className="mt-4 leading-7 text-slate-300">
+            {user.lookingFor?.length
+              ? `Open to collaborating with ${user.lookingFor.join(", ")}.`
+              : "Add what kind of people you want to meet so the right founders know when to reach out."}
           </p>
         </div>
       </section>

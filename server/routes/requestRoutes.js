@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {
   sendRequest,
+  getRequestStatus,
   getReceivedRequests,
   getSentRequests,
   acceptRequest,
@@ -23,6 +24,12 @@ router.get(
   "/sent",
   protect,
   getSentRequests
+);
+
+router.get(
+  "/status",
+  protect,
+  getRequestStatus
 );
 
 router.post(
