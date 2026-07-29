@@ -312,6 +312,10 @@ button:disabled {
   padding: 0 16px;
 }
 
+.field-with-icon {
+  padding-left: 44px;
+}
+
 .textarea {
   min-height: 130px;
   padding: 14px 16px;

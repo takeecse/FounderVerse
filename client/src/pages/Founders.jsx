@@ -74,7 +74,7 @@ function Founders() {
             onChange={(e) =>
               setNameSearch(e.target.value)
             }
-            className="field pl-11"
+            className="field field-with-icon"
           />
         </label>
 
@@ -87,7 +87,7 @@ function Founders() {
             onChange={(e) =>
               setSkillSearch(e.target.value)
             }
-            className="field pl-11"
+            className="field field-with-icon"
           />
         </label>
       </section>

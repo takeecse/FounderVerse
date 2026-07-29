@@ -104,7 +104,7 @@ function Startups() {
               onChange={(e) =>
                 field.setValue(e.target.value)
               }
-              className="field pl-11"
+              className="field field-with-icon"
             />
           </label>
         ))}
