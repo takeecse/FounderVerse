@@ -5,6 +5,7 @@ const {
   sendMessage,
   getConversation,
   getConversations,
+  markConversationRead,
 } = require("../controllers/chatController");
 
 const {
@@ -21,6 +22,12 @@ router.get(
   "/conversations",
   protect,
   getConversations
+);
+
+router.put(
+  "/:userId/read",
+  protect,
+  markConversationRead
 );
 
 router.get(

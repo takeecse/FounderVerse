@@ -49,3 +49,17 @@ export const getConversations = () => {
     }
   );
 };
+
+export const markConversationRead = (userId) => {
+  const token = localStorage.getItem("token");
+
+  return axios.put(
+    `${API}/${userId}/read`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+};

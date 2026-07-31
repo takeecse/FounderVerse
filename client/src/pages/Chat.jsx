@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   FaArrowLeft,
@@ -11,6 +17,7 @@ import socket, { connectSocket } from "../socket";
 import {
   getConversation,
   getConversations,
+  markConversationRead,
   sendMessage,
 } from "../api/chatApi";
 import { getUserById } from "../api/userApi";
@@ -98,7 +105,7 @@ function Chat() {
     );
   }, [conversationSearch, conversationUsers]);
 
-  const addMessage = (nextMessage) => {
+  const addMessage = useCallback((nextMessage) => {
     setMessages((prev) => {
       if (
         prev.some(
@@ -110,7 +117,70 @@ function Chat() {
 
       return [...prev, nextMessage];
     });
-  };
+  }, []);
+
+  const updateConversationPreview = useCallback(
+    (nextMessage, options = {}) => {
+      const peerId =
+        nextMessage.sender === currentUserId
+          ? nextMessage.receiver
+          : nextMessage.sender;
+
+      const shouldCountUnread =
+        !options.markRead &&
+        nextMessage.receiver === currentUserId &&
+        nextMessage.sender !== currentUserId &&
+        (!hasActiveChat || peerId !== userId);
+
+      setConversations((prev) => {
+        let matched = false;
+        const next = prev.map((user) => {
+          if (user._id !== peerId) {
+            return user;
+          }
+
+          matched = true;
+
+          return {
+            ...user,
+            lastMessage: nextMessage.message,
+            lastMessageAt:
+              nextMessage.createdAt || new Date().toISOString(),
+            unreadCount: options.markRead
+              ? 0
+              : shouldCountUnread
+                ? (user.unreadCount || 0) + 1
+                : user.unreadCount || 0,
+          };
+        });
+
+        if (
+          !matched &&
+          activeUser?._id === peerId
+        ) {
+          next.unshift({
+            ...activeUser,
+            lastMessage: nextMessage.message,
+            lastMessageAt:
+              nextMessage.createdAt || new Date().toISOString(),
+            unreadCount: shouldCountUnread ? 1 : 0,
+          });
+        }
+
+        return next.sort(
+          (a, b) =>
+            new Date(b.lastMessageAt || 0) -
+            new Date(a.lastMessageAt || 0)
+        );
+      });
+    },
+    [
+      activeUser,
+      currentUserId,
+      hasActiveChat,
+      userId,
+    ]
+  );
 
   useEffect(() => {
     const loadChat = async () => {
@@ -195,25 +265,22 @@ function Chat() {
       if (belongsToCurrentChat) {
         shouldStickToBottomRef.current = true;
         addMessage(data);
-        getConversation(userId, {
-          limit: MESSAGE_PAGE_SIZE,
-        })
-          .then(async (res) => {
-            const payload = normalizeConversationResponse(
-              res.data
-            );
-            const conversationsRes =
-              await getConversations();
+        updateConversationPreview(data, {
+          markRead: data.receiver === currentUserId,
+        });
 
-            setMessages(payload.messages);
-            setHasMoreMessages(payload.hasMore);
-            setNextCursor(payload.nextCursor);
-            setConversations(conversationsRes.data);
-            window.dispatchEvent(
-              new Event("founderverse:chat-updated")
-            );
-          })
-          .catch((error) => console.error(error));
+        if (
+          data.receiver === currentUserId &&
+          data.sender !== currentUserId
+        ) {
+          markConversationRead(userId).catch((error) =>
+            console.error(error)
+          );
+        }
+
+        window.dispatchEvent(
+          new Event("founderverse:chat-updated")
+        );
 
         return;
       }
@@ -228,7 +295,21 @@ function Chat() {
         .catch((error) => console.error(error));
     };
 
-    const handleReadUpdate = () => {
+    const handleReadUpdate = (data) => {
+      if (data?.conversationUserId) {
+        setConversations((prev) =>
+          prev.map((user) =>
+            user._id === data.conversationUserId
+              ? { ...user, unreadCount: 0 }
+              : user
+          )
+        );
+        window.dispatchEvent(
+          new Event("founderverse:chat-updated")
+        );
+        return;
+      }
+
       getConversations()
         .then((res) => {
           setConversations(res.data);
@@ -246,7 +327,14 @@ function Chat() {
       socket.off("receive_message", handleReceive);
       socket.off("messages_read", handleReadUpdate);
     };
-  }, [userId, currentUserId, hasActiveChat, isSelfChat]);
+  }, [
+    addMessage,
+    updateConversationPreview,
+    userId,
+    currentUserId,
+    hasActiveChat,
+    isSelfChat,
+  ]);
 
   useEffect(() => {
     if (!shouldStickToBottomRef.current) {
@@ -317,11 +405,10 @@ function Chat() {
 
       shouldStickToBottomRef.current = true;
       addMessage(res.data);
+      updateConversationPreview(res.data, {
+        markRead: true,
+      });
       setMessage("");
-
-      const conversationsRes =
-        await getConversations();
-      setConversations(conversationsRes.data);
       window.dispatchEvent(
         new Event("founderverse:chat-updated")
       );
@@ -336,8 +423,12 @@ function Chat() {
   };
 
   return (
-    <div className="page-shell page-wide">
-      <div className="section-head">
+    <div
+      className={`page-shell page-wide chat-shell ${
+        hasActiveChat ? "active-chat-shell" : ""
+      }`}
+    >
+      <div className="section-head chat-head">
         <div>
           <p className="eyebrow">Private chat</p>
           <h1 className="page-title">
@@ -384,8 +475,14 @@ function Chat() {
           </div>
         </section>
       ) : (
-        <section className="grid h-[calc(100vh-220px)] min-h-[560px] max-h-[760px] grid-rows-[220px_minmax(0,1fr)] gap-5 lg:grid-cols-[330px_1fr] lg:grid-rows-[minmax(0,1fr)]">
-        <aside className="glass-panel flex min-h-0 flex-col overflow-hidden">
+        <section
+          className={`chat-layout ${
+            hasActiveChat
+              ? "has-active-chat"
+              : "no-active-chat"
+          }`}
+        >
+        <aside className="chat-sidebar glass-panel flex min-h-0 flex-col overflow-hidden">
           <div className="border-b border-white/10 p-5">
             <h2 className="flex items-center gap-2 text-2xl font-black">
               <FaUserGroup className="text-cyan-200" />
@@ -459,8 +556,15 @@ function Chat() {
         </aside>
 
         {hasActiveChat ? (
-        <div className="glass-panel flex h-full min-h-0 flex-col overflow-hidden">
-          <header className="flex items-center gap-4 border-b border-white/10 p-5">
+        <div className="chat-panel glass-panel flex h-full min-h-0 flex-col overflow-hidden">
+          <header className="chat-panel-header flex items-center gap-4 border-b border-white/10 p-5">
+            <Link
+              to="/chat"
+              className="chat-mobile-back btn btn-secondary icon-btn"
+              title="Back to conversations"
+            >
+              <FaArrowLeft />
+            </Link>
             <img
               src={
                 activeUser?.photoURL ||
@@ -469,18 +573,18 @@ function Chat() {
               alt={activeUser?.name || "Founder"}
               className="avatar h-12 w-12"
             />
-            <div>
-              <h2 className="text-2xl font-black">
+            <div className="min-w-0">
+              <h2 className="truncate text-2xl font-black">
                 {activeUser?.name || "Founder"}
               </h2>
-              <p className="text-sm text-slate-400">
+              <p className="truncate text-sm text-slate-400">
                 {activeUser?.role || "Founder"} -{" "}
                 {activeUser?.location || "Remote"}
               </p>
             </div>
           </header>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-5">
+          <div className="chat-messages min-h-0 flex-1 overflow-y-auto p-5">
             {loading ? (
               <div className="flex h-full items-center justify-center text-slate-400">
                 Loading conversation...
@@ -523,7 +627,7 @@ function Chat() {
                       className={`flex ${mine ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[min(78%,620px)] rounded-lg border px-4 py-3 shadow-xl ${
+                        className={`chat-bubble max-w-[min(78%,620px)] rounded-lg border px-4 py-3 shadow-xl ${
                           mine
                             ? "border-cyan-300/30 bg-cyan-300/15"
                             : "border-white/10 bg-white/5"
@@ -546,7 +650,7 @@ function Chat() {
 
           <form
             onSubmit={handleSend}
-            className="border-t border-white/10 p-4"
+            className="chat-composer border-t border-white/10 p-4"
           >
             <div className="flex gap-3">
               <input
@@ -569,7 +673,7 @@ function Chat() {
           </form>
         </div>
         ) : (
-        <div className="glass-panel flex h-full min-h-0 items-center justify-center p-6 text-center">
+        <div className="chat-empty-panel glass-panel flex h-full min-h-0 items-center justify-center p-6 text-center">
           <div className="max-w-sm">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-lg border border-cyan-300/30 bg-cyan-300/10 text-2xl text-cyan-200">
               <FaUserGroup />

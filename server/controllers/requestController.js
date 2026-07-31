@@ -1,8 +1,10 @@
 const Request = require("../models/Request");
 const Startup = require("../models/Startup");
-const Notification = require("../models/Notification");
 const User = require("../models/User");
 const mongoose = require("mongoose");
+const {
+  createNotification,
+} = require("./notificationController");
 
 const isValidId = (id) =>
   mongoose.Types.ObjectId.isValid(id);
@@ -127,7 +129,7 @@ const sendRequest = async (req, res) => {
       message,
     });
 
-    await Notification.create({
+    await createNotification(req, {
       user: receiverId,
       title: "New Co-Founder Request",
       message: startup
@@ -355,7 +357,7 @@ const acceptRequest = async (req, res) => {
       }
     );
 
-    await Notification.create({
+    await createNotification(req, {
       user: request.sender,
       title: "Request Accepted",
       message:
@@ -411,7 +413,7 @@ const rejectRequest = async (req, res) => {
 
     await request.save();
 
-    await Notification.create({
+    await createNotification(req, {
       user: request.sender,
       title: "Request Rejected",
       message:

@@ -25,6 +25,34 @@ const getPageLimit = (value) => {
   return Math.min(parsed, 100);
 };
 
+const markConversationMessagesRead = async (
+  req,
+  conversationUserId
+) => {
+  const readResult = await Chat.updateMany(
+    {
+      sender: conversationUserId,
+      receiver: req.user.id,
+      isRead: { $ne: true },
+    },
+    {
+      isRead: true,
+    }
+  );
+
+  if (readResult.modifiedCount > 0) {
+    const io = req.app.get("io");
+
+    if (io) {
+      io.to(`user:${req.user.id}`).emit("messages_read", {
+        conversationUserId,
+      });
+    }
+  }
+
+  return readResult;
+};
+
 const sendMessage = async (req, res) => {
   try {
     const {
@@ -99,15 +127,9 @@ const getConversation = async (req, res) => {
       });
     }
 
-    const readResult = await Chat.updateMany(
-      {
-        sender: req.params.userId,
-        receiver: req.user.id,
-        isRead: { $ne: true },
-      },
-      {
-        isRead: true,
-      }
+    await markConversationMessagesRead(
+      req,
+      req.params.userId
     );
 
     const baseQuery = {
@@ -155,20 +177,40 @@ const getConversation = async (req, res) => {
         isRead: message.isRead,
       }));
 
-    if (readResult.modifiedCount > 0) {
-      const io = req.app.get("io");
-
-      if (io) {
-        io.to(`user:${req.user.id}`).emit("messages_read", {
-          conversationUserId: req.params.userId,
-        });
-      }
-    }
-
     res.json({
       messages: pageMessages,
       hasMore,
       nextCursor: pageMessages[0]?.createdAt || null,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+const markConversationRead = async (req, res) => {
+  try {
+    if (!isValidId(req.params.userId)) {
+      return res.status(400).json({
+        message: "Invalid user",
+      });
+    }
+
+    if (req.params.userId === req.user.id) {
+      return res.status(400).json({
+        message: "You cannot open a conversation with yourself",
+      });
+    }
+
+    const readResult = await markConversationMessagesRead(
+      req,
+      req.params.userId
+    );
+
+    res.json({
+      modifiedCount: readResult.modifiedCount,
     });
 
   } catch (error) {
@@ -268,4 +310,5 @@ module.exports = {
   sendMessage,
   getConversation,
   getConversations,
+  markConversationRead,
 };

@@ -17,7 +17,11 @@ import { auth } from "../firebase";
 import { clearSession, isAuthenticated } from "../utils/session";
 import { getProfile } from "../api/userApi";
 import { getConversations } from "../api/chatApi";
-import socket, { connectSocket } from "../socket";
+import { getNotifications } from "../api/notificationApi";
+import socket, {
+  connectSocket,
+  disconnectSocket,
+} from "../socket";
 
 const publicLinks = [
   { to: "/startups", label: "Startups" },
@@ -35,6 +39,8 @@ function Navbar() {
     useState(null);
   const [profile, setProfile] = useState(null);
   const [unreadChats, setUnreadChats] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] =
+    useState(0);
   const [loggedIn, setLoggedIn] = useState(
     isAuthenticated()
   );
@@ -44,14 +50,20 @@ function Navbar() {
     if (!isAuthenticated()) {
       setProfile(null);
       setUnreadChats(0);
+      setUnreadNotifications(0);
       return;
     }
 
     try {
-      const [profileRes, conversationsRes] =
+      const [
+        profileRes,
+        conversationsRes,
+        notificationsRes,
+      ] =
         await Promise.all([
           getProfile(),
           getConversations(),
+          getNotifications(),
         ]);
 
       setProfile(profileRes.data);
@@ -60,6 +72,11 @@ function Navbar() {
           (total, item) => total + (item.unreadCount || 0),
           0
         )
+      );
+      setUnreadNotifications(
+        notificationsRes.data.filter(
+          (item) => !item.isRead
+        ).length
       );
     } catch (error) {
       console.error(error);
@@ -93,6 +110,10 @@ function Navbar() {
       "founderverse:chat-updated",
       loadPrivateNavData
     );
+    window.addEventListener(
+      "founderverse:notifications-read",
+      loadPrivateNavData
+    );
 
     return () => {
       unsubscribe();
@@ -108,6 +129,10 @@ function Navbar() {
         "founderverse:chat-updated",
         loadPrivateNavData
       );
+      window.removeEventListener(
+        "founderverse:notifications-read",
+        loadPrivateNavData
+      );
     };
   }, [loadPrivateNavData]);
 
@@ -116,16 +141,40 @@ function Navbar() {
 
     connectSocket();
 
-    const refreshChatBadge = () => {
+    const refreshBadges = () => {
       loadPrivateNavData();
     };
 
-    socket.on("receive_message", refreshChatBadge);
-    socket.on("messages_read", refreshChatBadge);
+    const handleNewNotification = () => {
+      loadPrivateNavData();
+    };
+
+    const handleNotificationsRead = () => {
+      setUnreadNotifications(0);
+    };
+
+    socket.on("receive_message", refreshBadges);
+    socket.on("messages_read", refreshBadges);
+    socket.on(
+      "notification:new",
+      handleNewNotification
+    );
+    socket.on(
+      "notifications:read-all",
+      handleNotificationsRead
+    );
 
     return () => {
-      socket.off("receive_message", refreshChatBadge);
-      socket.off("messages_read", refreshChatBadge);
+      socket.off("receive_message", refreshBadges);
+      socket.off("messages_read", refreshBadges);
+      socket.off(
+        "notification:new",
+        handleNewNotification
+      );
+      socket.off(
+        "notifications:read-all",
+        handleNotificationsRead
+      );
     };
   }, [loggedIn, loadPrivateNavData]);
 
@@ -134,9 +183,11 @@ function Navbar() {
   const handleLogout = async () => {
     await signOut(auth).catch(() => {});
     clearSession();
+    disconnectSocket();
     setLoggedIn(false);
     setProfile(null);
     setUnreadChats(0);
+    setUnreadNotifications(0);
     closeMenu();
     navigate("/");
   };
@@ -151,19 +202,23 @@ function Navbar() {
   const authLinks = loggedIn
     ? privateLinks
     : [];
+  const totalUnread =
+    unreadChats + unreadNotifications;
+  const badgeLabel = (count) =>
+    count > 99 ? "99+" : count;
 
   return (
-    <nav className="sticky top-0 z-50 px-4 py-4">
+    <nav className="site-nav sticky top-0 z-50 px-4 py-4">
       <div className="glass-panel mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
         <Link
           to="/"
           onClick={closeMenu}
-          className="flex items-center gap-3"
+          className="site-brand flex items-center gap-3"
         >
           <span className="grid h-10 w-10 place-items-center rounded-lg border border-cyan-300/30 bg-cyan-300/10 text-cyan-200 shadow-lg shadow-cyan-950/40">
             <FaRocket />
           </span>
-          <span className="text-xl font-black tracking-normal">
+          <span className="site-brand-name text-xl font-black tracking-normal">
             Founder<span className="text-gradient">Verse</span>
           </span>
         </Link>
@@ -196,23 +251,28 @@ function Navbar() {
               >
                 <Link
                   to="/chat"
-                  className="btn btn-secondary relative whitespace-nowrap"
+                  className="nav-action-with-badge btn btn-secondary relative whitespace-nowrap pr-8"
                   title="Chat"
                 >
                   <FaComments />
                   Chat
                   {unreadChats > 0 && (
-                    <span className="absolute -right-2 -top-2 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[11px] font-black text-white">
-                      {unreadChats}
+                    <span className="nav-badge">
+                      {badgeLabel(unreadChats)}
                     </span>
                   )}
                 </Link>
                 <Link
                   to="/notifications"
-                  className="btn btn-secondary icon-btn"
+                  className="nav-action-with-badge btn btn-secondary icon-btn relative"
                   title="Notifications"
                 >
                   <FaBell />
+                  {unreadNotifications > 0 && (
+                    <span className="nav-badge">
+                      {badgeLabel(unreadNotifications)}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   to="/profile"
@@ -254,9 +314,9 @@ function Navbar() {
                 aria-controls="desktop-account-navigation"
               >
                 <FaBars />
-                {open && unreadChats > 0 && (
-                  <span className="absolute -right-2 -top-2 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[11px] font-black text-white">
-                    {unreadChats}
+                {open && totalUnread > 0 && (
+                  <span className="nav-badge">
+                    {badgeLabel(totalUnread)}
                   </span>
                 )}
               </button>
@@ -282,12 +342,17 @@ function Navbar() {
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="nav-toggle nav-toggle-mobile"
+          className="nav-toggle nav-toggle-mobile relative"
           title="Toggle navigation"
           aria-expanded={open}
           aria-controls="mobile-navigation"
         >
           <FaBars />
+          {totalUnread > 0 && (
+            <span className="nav-badge">
+              {badgeLabel(totalUnread)}
+            </span>
+          )}
         </button>
       </div>
 
@@ -325,8 +390,8 @@ function Navbar() {
               >
                 Chat
                 {unreadChats > 0 && (
-                  <span className="ml-2 rounded-full bg-rose-500 px-2 py-0.5 text-xs text-white">
-                    {unreadChats}
+                  <span className="nav-inline-badge ml-2">
+                    {badgeLabel(unreadChats)}
                   </span>
                 )}
               </NavLink>
@@ -343,6 +408,11 @@ function Navbar() {
                 className={navClass}
               >
                 Notifications
+                {unreadNotifications > 0 && (
+                  <span className="nav-inline-badge ml-2">
+                    {badgeLabel(unreadNotifications)}
+                  </span>
+                )}
               </NavLink>
               <button
                 type="button"

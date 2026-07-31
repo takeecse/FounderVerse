@@ -8,6 +8,7 @@ export const connectSocket = () => {
   const token = localStorage.getItem("token");
 
   if (!token) {
+    socket.disconnect();
     return socket;
   }
 
@@ -18,6 +19,11 @@ export const connectSocket = () => {
   }
 
   return socket;
+};
+
+export const disconnectSocket = () => {
+  socket.disconnect();
+  socket.auth = {};
 };
 
 export default socket;
