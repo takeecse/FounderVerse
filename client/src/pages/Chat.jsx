@@ -497,7 +497,7 @@ function Chat() {
                   setConversationSearch(e.target.value)
                 }
                 placeholder="Search conversations..."
-                className="field pl-11"
+                className="field field-with-icon"
               />
             </label>
           </div>
