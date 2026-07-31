@@ -182,11 +182,16 @@ function Chat() {
     ]
   );
 
-  useEffect(() => {
-    const loadChat = async () => {
+  const loadChat = useCallback(
+    async (options = {}) => {
+      const showLoading = !options.silent;
+
       if (!hasActiveChat) {
         try {
-          setLoading(true);
+          if (showLoading) {
+            setLoading(true);
+          }
+
           const conversationsRes =
             await getConversations();
 
@@ -201,7 +206,9 @@ function Chat() {
         } catch (error) {
           console.error(error);
         } finally {
-          setLoading(false);
+          if (showLoading) {
+            setLoading(false);
+          }
         }
 
         return;
@@ -217,7 +224,10 @@ function Chat() {
       }
 
       try {
-        setLoading(true);
+        if (showLoading) {
+          setLoading(true);
+        }
+
         shouldStickToBottomRef.current = true;
         const messagesRes = await getConversation(userId, {
           limit: MESSAGE_PAGE_SIZE,
@@ -242,17 +252,45 @@ function Chat() {
       } catch (error) {
         console.error(error);
       } finally {
-        setLoading(false);
+        if (showLoading) {
+          setLoading(false);
+        }
       }
-    };
+    },
+    [userId, hasActiveChat, isSelfChat]
+  );
 
-    loadChat();
-  }, [userId, currentUserId, hasActiveChat, isSelfChat]);
+  useEffect(() => {
+    let active = true;
+
+    Promise.resolve().then(() => {
+      if (active) {
+        loadChat();
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [loadChat]);
 
   useEffect(() => {
     if (isSelfChat || !currentUserId) return;
 
     connectSocket();
+
+    const refreshAfterReconnect = () => {
+      loadChat({
+        silent: true,
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        connectSocket();
+        refreshAfterReconnect();
+      }
+    };
 
     const handleReceive = (data) => {
       const belongsToCurrentChat =
@@ -322,13 +360,34 @@ function Chat() {
 
     socket.on("receive_message", handleReceive);
     socket.on("messages_read", handleReadUpdate);
+    socket.on("connect", refreshAfterReconnect);
+    window.addEventListener(
+      "focus",
+      refreshAfterReconnect
+    );
+    window.addEventListener("online", connectSocket);
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
 
     return () => {
       socket.off("receive_message", handleReceive);
       socket.off("messages_read", handleReadUpdate);
+      socket.off("connect", refreshAfterReconnect);
+      window.removeEventListener(
+        "focus",
+        refreshAfterReconnect
+      );
+      window.removeEventListener("online", connectSocket);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
+      );
     };
   }, [
     addMessage,
+    loadChat,
     updateConversationPreview,
     userId,
     currentUserId,

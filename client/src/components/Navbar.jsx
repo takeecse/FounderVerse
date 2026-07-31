@@ -142,7 +142,14 @@ function Navbar() {
     connectSocket();
 
     const refreshBadges = () => {
+      connectSocket();
       loadPrivateNavData();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshBadges();
+      }
     };
 
     const handleNewNotification = () => {
@@ -155,6 +162,7 @@ function Navbar() {
 
     socket.on("receive_message", refreshBadges);
     socket.on("messages_read", refreshBadges);
+    socket.on("connect", refreshBadges);
     socket.on(
       "notification:new",
       handleNewNotification
@@ -163,10 +171,17 @@ function Navbar() {
       "notifications:read-all",
       handleNotificationsRead
     );
+    window.addEventListener("focus", refreshBadges);
+    window.addEventListener("online", connectSocket);
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
 
     return () => {
       socket.off("receive_message", refreshBadges);
       socket.off("messages_read", refreshBadges);
+      socket.off("connect", refreshBadges);
       socket.off(
         "notification:new",
         handleNewNotification
@@ -174,6 +189,12 @@ function Navbar() {
       socket.off(
         "notifications:read-all",
         handleNotificationsRead
+      );
+      window.removeEventListener("focus", refreshBadges);
+      window.removeEventListener("online", connectSocket);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
       );
     };
   }, [loggedIn, loadPrivateNavData]);
