@@ -114,7 +114,6 @@ function StartupDetails() {
         startup._id,
         requestMessage.trim()
       );
-      alert("Request sent successfully");
       setRequestMessage("");
       setRequestStatus("pending");
     } catch (error) {

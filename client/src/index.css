@@ -2,7 +2,7 @@
 
 :root {
   color-scheme: dark;
-  --bg: #05070d;
+  --bg: #000;
   --ink: #f8fafc;
   --muted: #94a3b8;
   --line: rgba(148, 163, 184, 0.22);
@@ -70,10 +70,9 @@ button:disabled {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    linear-gradient(115deg, rgba(34, 211, 238, 0.08), transparent 28%),
-    linear-gradient(235deg, rgba(52, 211, 153, 0.08), transparent 32%),
-    linear-gradient(155deg, rgba(251, 191, 36, 0.05), transparent 35%),
-    #05070d;
+    linear-gradient(115deg, rgba(34, 211, 238, 0.035), transparent 30%),
+    linear-gradient(235deg, rgba(52, 211, 153, 0.035), transparent 34%),
+    #000;
 }
 
 .app-shell::before {
@@ -85,14 +84,14 @@ button:disabled {
   background:
     conic-gradient(
       from 120deg,
-      rgba(34, 211, 238, 0.16),
-      rgba(52, 211, 153, 0.1),
-      rgba(251, 191, 36, 0.08),
-      rgba(96, 165, 250, 0.12),
-      rgba(34, 211, 238, 0.16)
+      rgba(34, 211, 238, 0.08),
+      rgba(52, 211, 153, 0.055),
+      rgba(251, 191, 36, 0.04),
+      rgba(96, 165, 250, 0.055),
+      rgba(34, 211, 238, 0.08)
     );
   filter: blur(110px);
-  opacity: 0.65;
+  opacity: 0.42;
   transform: translate3d(0, 0, 0);
 }
 
@@ -103,10 +102,24 @@ button:disabled {
   pointer-events: none;
   content: "";
   background-image:
-    linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
+    linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+.app-shell.onboarding-mode {
+  background:
+    linear-gradient(180deg, rgba(34, 211, 238, 0.06), transparent 36%),
+    #000;
+}
+
+.app-shell.onboarding-mode::before {
+  opacity: 0.24;
+}
+
+.app-shell.onboarding-mode::after {
+  opacity: 0.5;
 }
 
 .app-shell > nav,
@@ -119,6 +132,32 @@ button:disabled {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
   padding: 42px 0 80px;
+}
+
+.onboarding-shell {
+  width: min(980px, calc(100% - 32px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 56px 0 80px;
+}
+
+.onboarding-shell .section-head {
+  justify-content: center;
+  text-align: center;
+}
+
+.onboarding-shell .page-title,
+.onboarding-shell .page-subtitle {
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.onboarding-card {
+  max-width: 880px;
+  margin: 0 auto;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015)),
+    rgba(3, 7, 18, 0.9);
 }
 
 .page-wide {

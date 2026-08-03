@@ -11,7 +11,6 @@ import {
 
 const onboardingPaths = [
   "/complete-profile",
-  "/edit-profile",
 ];
 
 function OnboardingGate({ children }) {
@@ -101,7 +100,6 @@ function OnboardingGate({ children }) {
       <Navigate
         to="/complete-profile"
         replace
-        state={{ from: location.pathname }}
       />
     );
   }

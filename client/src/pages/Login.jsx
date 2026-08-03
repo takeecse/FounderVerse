@@ -93,7 +93,6 @@ function Login() {
     if (!res.data.user?.profileCompleted) {
       navigate("/complete-profile", {
         replace: true,
-        state: { from: safeRedirectTo },
       });
       return;
     }

@@ -71,7 +71,6 @@ function FounderDetails() {
         null,
         `Hi ${user.name}, I'd like to collaborate with you.`
       );
-      alert("Request sent successfully");
       setRequestStatus("pending");
     } catch (error) {
       alert(

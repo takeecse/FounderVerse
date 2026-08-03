@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   Link,
+  Navigate,
   useLocation,
   useNavigate,
 } from "react-router-dom";
@@ -34,7 +35,7 @@ function EditProfile() {
   const [saving, setSaving] = useState(false);
   const [imageError, setImageError] = useState("");
   const [profileCompleted, setProfileCompleted] =
-    useState(true);
+    useState(null);
   const [googlePhotoURL, setGooglePhotoURL] = useState(
     auth.currentUser?.photoURL || ""
   );
@@ -162,18 +163,9 @@ function EditProfile() {
         })
       );
 
-      const fallbackPath = profileCompleted
-        ? "/profile"
-        : "/";
-      const fromPath =
-        location.state?.from &&
-        !["/complete-profile", "/edit-profile"].includes(
-          location.state.from
-        )
-          ? location.state.from
-          : fallbackPath;
-
-      navigate(fromPath, { replace: !profileCompleted });
+      navigate(profileCompleted ? "/profile" : "/", {
+        replace: !profileCompleted,
+      });
     } catch (error) {
       alert(
         error.response?.data?.message ||
@@ -192,10 +184,35 @@ function EditProfile() {
     formData.photoURL &&
       (!googlePhotoURL || formData.photoURL !== googlePhotoURL)
   );
-  const isOnboarding = !profileCompleted;
+  const isCompletionRoute =
+    location.pathname === "/complete-profile";
+  const isOnboarding =
+    isCompletionRoute || profileCompleted === false;
+
+  if (
+    profileCompleted &&
+    isCompletionRoute &&
+    !saving
+  ) {
+    return <Navigate to="/profile" replace />;
+  }
+
+  if (profileCompleted === null) {
+    return (
+      <div className="page-shell flex min-h-[50vh] items-center justify-center text-slate-300">
+        Loading profile...
+      </div>
+    );
+  }
 
   return (
-    <div className="page-shell">
+    <div
+      className={
+        isOnboarding
+          ? "onboarding-shell"
+          : "page-shell"
+      }
+    >
       <div className="section-head">
         <div>
           <p className="eyebrow">Founder identity</p>
@@ -219,7 +236,9 @@ function EditProfile() {
 
       <form
         onSubmit={handleSubmit}
-        className="glass-panel p-6 sm:p-8"
+        className={`glass-panel p-6 sm:p-8 ${
+          isOnboarding ? "onboarding-card" : ""
+        }`}
       >
         <section className="mb-8 flex flex-col gap-6 rounded-lg border border-white/10 bg-white/5 p-5 md:flex-row md:items-center">
           <img

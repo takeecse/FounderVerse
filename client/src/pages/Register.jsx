@@ -83,7 +83,6 @@ function Register() {
     if (!res.data.user?.profileCompleted) {
       navigate("/complete-profile", {
         replace: true,
-        state: { from: "/" },
       });
       return;
     }
