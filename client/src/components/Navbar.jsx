@@ -25,7 +25,7 @@ import socket, {
 
 const publicLinks = [
   { to: "/startups", label: "Startups" },
-  { to: "/founders", label: "Founders" },
+  { to: "/founders", label: "Members" },
 ];
 
 const privateLinks = [
@@ -202,7 +202,7 @@ function Navbar() {
   const closeMenu = () => setOpen(false);
 
   const handleLogout = async () => {
-    await signOut(auth).catch(() => {});
+    await signOut(auth).catch(() => { });
     clearSession();
     disconnectSocket();
     setLoggedIn(false);
@@ -214,10 +214,9 @@ function Navbar() {
   };
 
   const navClass = ({ isActive }) =>
-    `inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition ${
-      isActive
-        ? "bg-white/10 text-cyan-200"
-        : "text-slate-300 hover:bg-white/10 hover:text-white"
+    `inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition ${isActive
+      ? "bg-white/10 text-cyan-200"
+      : "text-slate-300 hover:bg-white/10 hover:text-white"
     }`;
 
   const authLinks = loggedIn
@@ -264,11 +263,10 @@ function Navbar() {
             <>
               <div
                 id="desktop-account-navigation"
-                className={`flex items-center gap-3 overflow-hidden transition-all duration-200 ease-out ${
-                  open
-                    ? "max-w-0 opacity-0"
-                    : "max-w-[560px] opacity-100"
-                }`}
+                className={`flex items-center gap-3 overflow-hidden transition-all duration-200 ease-out ${open
+                  ? "max-w-0 opacity-0"
+                  : "max-w-[760px] opacity-100"
+                  }`}
               >
                 <Link
                   to="/chat"
@@ -295,6 +293,23 @@ function Navbar() {
                     </span>
                   )}
                 </Link>
+
+                {profile?.isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="btn btn-secondary whitespace-nowrap"
+                  >
+                    Admin
+                  </Link>
+                )}
+                {profile?.isSystem && (
+                  <Link
+                    to="/system"
+                    className="btn btn-secondary whitespace-nowrap"
+                  >
+                    System
+                  </Link>
+                )}
                 <Link
                   to="/profile"
                   className="btn btn-secondary whitespace-nowrap"
@@ -379,89 +394,107 @@ function Navbar() {
 
       <div
         id="mobile-navigation"
-        className={`glass-panel mx-auto flex max-w-7xl flex-col gap-2 overflow-hidden p-3 transition-all duration-200 ease-out lg:hidden ${
-          open
-            ? "mt-3 max-h-[720px] opacity-100"
-            : "max-h-0 border-transparent py-0 opacity-0"
-        }`}
+        className={`glass-panel mx-auto flex max-w-7xl flex-col gap-2 overflow-hidden p-3 transition-all duration-200 ease-out lg:hidden ${open
+          ? "mt-3 max-h-[720px] opacity-100"
+          : "max-h-0 border-transparent py-0 opacity-0"
+          }`}
       >
+        <NavLink
+          to="/"
+          onClick={closeMenu}
+          className={navClass}
+        >
+          Home
+        </NavLink>
+        {[...publicLinks, ...authLinks].map((link) => (
           <NavLink
-            to="/"
+            key={link.to}
+            to={link.to}
             onClick={closeMenu}
             className={navClass}
           >
-            Home
+            {link.label}
           </NavLink>
-          {[...publicLinks, ...authLinks].map((link) => (
+        ))}
+        {loggedIn ? (
+          <>
             <NavLink
-              key={link.to}
-              to={link.to}
+              to="/chat"
               onClick={closeMenu}
               className={navClass}
             >
-              {link.label}
+              Chat
+              {unreadChats > 0 && (
+                <span className="nav-inline-badge ml-2">
+                  {badgeLabel(unreadChats)}
+                </span>
+              )}
             </NavLink>
-          ))}
-          {loggedIn ? (
-            <>
+            <NavLink
+              to="/profile"
+              onClick={closeMenu}
+              className={navClass}
+            >
+              Profile
+            </NavLink>
+
+            {profile?.isAdmin && (
               <NavLink
-                to="/chat"
+                to="/admin"
                 onClick={closeMenu}
                 className={navClass}
               >
-                Chat
-                {unreadChats > 0 && (
-                  <span className="nav-inline-badge ml-2">
-                    {badgeLabel(unreadChats)}
-                  </span>
-                )}
+                Admin
               </NavLink>
+            )}
+            {profile?.isSystem && (
               <NavLink
-                to="/profile"
+                to="/system"
                 onClick={closeMenu}
                 className={navClass}
               >
-                Profile
+                System Console
               </NavLink>
-              <NavLink
-                to="/notifications"
-                onClick={closeMenu}
-                className={navClass}
-              >
-                Notifications
-                {unreadNotifications > 0 && (
-                  <span className="nav-inline-badge ml-2">
-                    {badgeLabel(unreadNotifications)}
-                  </span>
-                )}
-              </NavLink>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="btn btn-secondary"
-              >
-                <FaArrowRightFromBracket />
-                Log out
-              </button>
-            </>
-          ) : (
-            <div className="grid gap-2">
-              <Link
-                to="/login"
-                onClick={closeMenu}
-                className="btn btn-secondary"
-              >
-                Login
-              </Link>
-              <Link
-                to="/register"
-                onClick={closeMenu}
-                className="btn btn-primary"
-              >
-                Join Now
-              </Link>
-            </div>
-          )}
+            )}
+            <NavLink
+              to="/notifications"
+              onClick={closeMenu}
+              className={navClass}
+            >
+              Notifications
+              {unreadNotifications > 0 && (
+                <span className="nav-inline-badge ml-2">
+                  {badgeLabel(unreadNotifications)}
+                </span>
+              )}
+            </NavLink>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="btn btn-secondary"
+            >
+              <FaArrowRightFromBracket />
+              Log out
+            </button>
+          </>
+        ) : (
+          <div className="grid gap-2">
+            <Link
+              to="/login"
+              onClick={closeMenu}
+              className="btn btn-secondary"
+            >
+              Login
+            </Link>
+            <Link
+              to="/register"
+              onClick={closeMenu}
+              className="btn btn-primary"
+            >
+              Join Now
+            </Link>
+          </div>
+        )}
       </div>
     </nav>
   );

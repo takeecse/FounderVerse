@@ -3,9 +3,15 @@ import { Link } from "react-router-dom";
 import {
   FaArrowRight,
   FaComments,
+  FaShieldHalved,
   FaUserGroup,
 } from "react-icons/fa6";
 import { getConnections } from "../api/userApi";
+import {
+  getRoleLabel,
+  isVerifiedForRole,
+  normalizeRoles,
+} from "../utils/roles";
 
 function Connections() {
   const [connections, setConnections] =
@@ -81,8 +87,16 @@ function Connections() {
                     {user.name}
                   </h2>
                   <p className="mt-1 text-cyan-200">
-                    {user.role || "Founder"}
+                    {getRoleLabel(user)}
                   </p>
+                  {normalizeRoles(user).some((role) =>
+                    isVerifiedForRole(user, role)
+                  ) && (
+                    <span className="chip chip-mint mt-2">
+                      <FaShieldHalved />
+                      Verified
+                    </span>
+                  )}
                   <p className="text-sm text-slate-400">
                     {user.location || "Remote"}
                   </p>

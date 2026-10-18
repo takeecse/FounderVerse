@@ -9,9 +9,11 @@ import {
   FaLinkedin,
   FaLocationDot,
   FaPen,
+  FaShieldHalved,
   FaStar,
 } from "react-icons/fa6";
 import { getUserById } from "../api/userApi";
+import ReportTargetButton from "../components/ReportTargetButton";
 import {
   getRequestStatus,
   sendRequest,
@@ -21,6 +23,11 @@ import {
   isAuthenticated,
 } from "../utils/session";
 import { normalizeExternalUrl } from "../utils/links";
+import {
+  getRoleLabel,
+  isVerifiedForRole,
+  normalizeRoles,
+} from "../utils/roles";
 
 function FounderDetails() {
   const { id } = useParams();
@@ -85,7 +92,7 @@ function FounderDetails() {
   if (!user) {
     return (
       <div className="page-shell flex min-h-[50vh] items-center justify-center text-slate-300">
-        Loading founder...
+        Loading member...
       </div>
     );
   }
@@ -111,23 +118,26 @@ function FounderDetails() {
     requestStatus === "connected" ||
     requestStatus === "accepted";
   const isPending = requestStatus === "pending";
+  const hasVerifiedRole = normalizeRoles(user).some((role) =>
+    isVerifiedForRole(user, role)
+  );
 
   return (
     <div className="page-shell">
       <div className="section-head">
         <div>
-          <p className="eyebrow">Founder dossier</p>
+          <p className="eyebrow">Member profile</p>
           <h1 className="page-title">
             {user.name}
           </h1>
           <p className="page-subtitle">
             {user.bio ||
-              "Explore this founder profile and start a focused collaboration conversation."}
+              "Explore this member profile and start a focused collaboration conversation."}
           </p>
         </div>
         <Link to="/founders" className="btn btn-secondary">
           <FaArrowLeft />
-          Founders
+          Members
         </Link>
       </div>
 
@@ -154,8 +164,14 @@ function FounderDetails() {
                 </span>
               </div>
               <p className="mt-2 text-xl text-cyan-200">
-                {user.role || "Founder"}
+                {getRoleLabel(user)}
               </p>
+              {hasVerifiedRole && (
+                <span className="chip chip-mint mt-2">
+                  <FaShieldHalved />
+                  Verified
+                </span>
+              )}
               <p className="mt-2 flex items-center gap-2 text-slate-400">
                 <FaLocationDot />
                 {user.location || "Remote"}
@@ -224,6 +240,13 @@ function FounderDetails() {
                 <FaComments />
                 Message
               </Link>
+            )}
+            {!isSelf && (
+              <ReportTargetButton
+                targetType="user"
+                targetId={user._id}
+                targetName={user.name}
+              />
             )}
           </div>
         </div>

@@ -1,5 +1,12 @@
 const Startup = require("../models/Startup");
 
+const publishedStartupFilter = {
+  $or: [
+    { moderationStatus: "published" },
+    { moderationStatus: { $exists: false } },
+  ],
+};
+
 const createStartup = async (req, res) => {
   try {
     const {
@@ -50,12 +57,15 @@ const createStartup = async (req, res) => {
 
 const getStartups = async (req, res) => {
   try {
-    const startups = await Startup.find()
+    const startups = await Startup.find(publishedStartupFilter)
       .populate(
         "founder",
-        "name email photoURL role location"
+        "name email photoURL role roles verification location"
       )
-      .populate("teamMembers", "name email");
+      .populate(
+        "teamMembers",
+        "name email photoURL role roles verification"
+      );
 
     res.json(startups);
 
@@ -83,15 +93,18 @@ const getMyStartups = async (req, res) => {
 
 const getStartupById = async (req, res) => {
   try {
-    const startup = await Startup.findById(
-      req.params.id
-    ).populate(
+    const startup = await Startup.findOne({
+      _id: req.params.id,
+      ...publishedStartupFilter,
+    }).populate(
       "founder",
       `
   name
   email
   photoURL
   role
+  roles
+  verification
   location
   github
   linkedin
@@ -104,6 +117,8 @@ const getStartupById = async (req, res) => {
   email
   photoURL
   role
+  roles
+  verification
   location
   github
   linkedin

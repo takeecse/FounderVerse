@@ -1,4 +1,12 @@
 const mongoose = require("mongoose");
+const {
+  SYSTEM_ROLES,
+  USER_ROLES,
+  LEGACY_USER_ROLES,
+  VERIFICATION_STATUSES,
+} = require("../utils/roles");
+
+const ACCOUNT_STATUSES = ["active", "suspended"];
 
 const userSchema = new mongoose.Schema(
   {
@@ -28,9 +36,32 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
-    role: {
+    roles: {
+      type: [String],
+      enum: [...USER_ROLES, ...LEGACY_USER_ROLES],
+      default: [],
+    },
+
+    accountStatus: {
       type: String,
-      default: "",
+      enum: ACCOUNT_STATUSES,
+      default: "active",
+    },
+
+    verification: {
+      type: Map,
+      of: {
+        type: String,
+        enum: VERIFICATION_STATUSES,
+      },
+      default: {},
+    },
+
+    systemRole: {
+      type: String,
+      enum: SYSTEM_ROLES,
+      default: "user",
+      select: false,
     },
 
     location: {

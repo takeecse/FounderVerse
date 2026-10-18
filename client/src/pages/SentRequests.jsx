@@ -5,6 +5,7 @@ import {
   FaPaperPlane,
 } from "react-icons/fa6";
 import { getSentRequests } from "../api/requestApi";
+import { getRoleLabel } from "../utils/roles";
 
 const statusClass = {
   accepted: "chip chip-mint",
@@ -73,7 +74,7 @@ function SentRequests() {
                       {request.receiver.name}
                     </h2>
                     <p className="mt-1 text-cyan-200">
-                      {request.receiver.role || "Founder"}
+                     {getRoleLabel(request.receiver)}
                     </p>
                     <p className="mt-1 text-sm text-slate-400">
                       {request.receiver.email}

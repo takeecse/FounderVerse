@@ -1,5 +1,9 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const {
+  isConfiguredAdminEmail,
+  isConfiguredSystemEmail,
+} = require("../utils/roles");
 
 const protect = async (req, res, next) => {
   try {
@@ -18,7 +22,7 @@ const protect = async (req, res, next) => {
 
       const user = await User.findById(
         decoded.id
-      ).select("-password");
+      ).select("-password +systemRole");
 
       if (!user) {
         return res.status(401).json({
@@ -26,9 +30,34 @@ const protect = async (req, res, next) => {
         });
       }
 
+      if (user.accountStatus === "suspended") {
+        return res.status(403).json({
+          message: "This account has been suspended. Contact support for help.",
+        });
+      }
+
+      if (isConfiguredSystemEmail(user.email)) {
+        if (user.systemRole !== "system") {
+          user.systemRole = "system";
+          await user.save();
+        }
+      } else if (user.systemRole === "system") {
+        user.systemRole = isConfiguredAdminEmail(user.email)
+          ? "admin"
+          : "user";
+        await user.save();
+      } else if (
+        user.systemRole === "user" &&
+        isConfiguredAdminEmail(user.email)
+      ) {
+        user.systemRole = "admin";
+        await user.save();
+      }
+
       req.user = {
         id: user._id.toString(),
         profile: user,
+        authMethod: decoded.authMethod || "legacy",
       };
 
       next();
@@ -44,4 +73,34 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+const requireAdmin = (req, res, next) => {
+  if (
+    !["admin", "system"].includes(req.user?.profile?.systemRole) ||
+    req.user?.authMethod !== "firebase"
+  ) {
+    return res.status(403).json({
+      message: "Forbidden",
+    });
+  }
+
+  next();
+};
+
+const requireSystem = (req, res, next) => {
+  if (
+    req.user?.profile?.systemRole !== "system" ||
+    req.user?.authMethod !== "firebase"
+  ) {
+    return res.status(403).json({
+      message: "System operator access required",
+    });
+  }
+
+  next();
+};
+
+module.exports = {
+  protect,
+  requireAdmin,
+  requireSystem,
+};

@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { Link, useParams } from "react-router-dom";
+import { getRoleLabel } from "../utils/roles";
 import {
   FaArrowLeft,
   FaMagnifyingGlass,
@@ -95,7 +96,7 @@ function Chat() {
       [
         user.name,
         user.email,
-        user.role,
+        getRoleLabel(user),
         user.lastMessage,
       ]
         .filter(Boolean)
@@ -599,8 +600,7 @@ function Chat() {
                     </p>
                     <p className="truncate text-xs text-slate-400">
                       {user.lastMessage ||
-                        user.role ||
-                        "Founder"}
+  getRoleLabel(user)}
                     </p>
                   </div>
                   {user.unreadCount > 0 && (
@@ -637,7 +637,7 @@ function Chat() {
                 {activeUser?.name || "Founder"}
               </h2>
               <p className="truncate text-sm text-slate-400">
-                {activeUser?.role || "Founder"} -{" "}
+               {activeUser ? getRoleLabel(activeUser) : "Collaborator"} -{" "}
                 {activeUser?.location || "Remote"}
               </p>
             </div>

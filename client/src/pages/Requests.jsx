@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { getRoleLabel } from "../utils/roles";
 import {
   FaCheck,
   FaComments,
@@ -112,7 +113,7 @@ function Requests() {
                       {request.sender.name}
                     </h2>
                     <p className="mt-1 text-cyan-200">
-                      {request.sender.role || "Founder"}
+                      {getRoleLabel(request.sender)}
                     </p>
                     <p className="mt-1 text-sm text-slate-400">
                       {request.sender.email}

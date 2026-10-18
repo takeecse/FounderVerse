@@ -36,11 +36,12 @@ function Hero() {
 
   return (
     <>
-      <section className="relative min-h-[calc(100vh-92px)] overflow-hidden">
-        <div className="absolute inset-0 opacity-90">
+      <section className="relative min-h-[calc(100vh-92px)] overflow-hidden bg-black">
+        <div className="pointer-events-none absolute inset-0 opacity-100">
           <Hero3D />
         </div>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.98),rgba(0,0,0,0.82)_40%,rgba(0,0,0,0.18)_72%,rgba(0,0,0,0.72))]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.98),rgba(0,0,0,0.78)_38%,rgba(0,0,0,0.16)_68%,rgba(0,0,0,0.7))]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.72))]" />
 
         <div className="page-shell page-wide relative z-10 flex min-h-[calc(100vh-92px)] items-center pb-28 pt-14">
           <div className="max-w-3xl">

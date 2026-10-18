@@ -10,10 +10,16 @@ import {
   FaLocationDot,
   FaPen,
   FaStar,
+  FaShieldHalved,
 } from "react-icons/fa6";
 import { getProfile } from "../api/userApi";
 import { auth } from "../firebase";
 import { normalizeExternalUrl } from "../utils/links";
+import {
+  getRoleLabel,
+  getVerificationStatus,
+  normalizeRoles,
+} from "../utils/roles";
 
 function Profile() {
   const [user, setUser] = useState(null);
@@ -68,9 +74,10 @@ function Profile() {
     },
   ].filter((link) => link.value);
 
+  const roles = normalizeRoles(user);
   const completionItems = [
     user.photoURL || googlePhotoURL,
-    user.role,
+    roles.length,
     user.location,
     user.bio,
     user.skills?.length,
@@ -129,9 +136,57 @@ function Profile() {
                 {completionPercent}% complete
               </span>
             </div>
-            <p className="mt-2 text-xl text-cyan-200">
-              {user.role || "Founder"}
-            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {roles.length > 0 ? (
+                roles.map((role) => {
+                  const isVerifiable = [
+                    "Founder",
+                    "Investor",
+                    "Mentor",
+                  ].includes(role);
+
+                  const status = isVerifiable
+                    ? getVerificationStatus(user, role)
+                    : "not required";
+
+                  return (
+                    <div
+                      key={role}
+                      className="flex flex-wrap items-center gap-2"
+                    >
+                      <span
+                        className={`chip ${status === "verified" ? "chip-mint" : ""
+                          }`}
+                      >
+                        {role}
+
+                        {status === "verified" && (
+                          <>
+                            <FaShieldHalved />
+                            Verified
+                          </>
+                        )}
+                      </span>
+
+                      {isVerifiable && status !== "verified" && (
+                        <Link
+                          to="/verification"
+                          className="text-xs font-bold text-cyan-200 hover:text-cyan-100"
+                        >
+                          {status === "pending"
+                            ? "View Verification"
+                            : "Verify"}
+                        </Link>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <span className="chip">
+                  {getRoleLabel(user)}
+                </span>
+              )}
+            </div>
             <p className="mt-2 flex items-center gap-2 text-slate-400">
               <FaLocationDot />
               {user.location || "Location not added"}

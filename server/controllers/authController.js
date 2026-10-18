@@ -2,21 +2,72 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const firebaseAdmin = require("../config/firebaseAdmin");
+const {
+  getPrimaryRole,
+  getUserRoles,
+  getVerificationMap,
+  isConfiguredAdminEmail,
+  isConfiguredSystemEmail,
+} = require("../utils/roles");
 
 const FIREBASE_WEB_API_KEY =
   process.env.FIREBASE_WEB_API_KEY ||
   "AIzaSyDsWjs9r81XxwVl9oLqAqeWkpeSnv51eLc";
 
-const createToken = (userId) =>
+const createToken = (userId, authMethod = "firebase") =>
   jwt.sign(
     {
       id: userId,
+      authMethod,
     },
     process.env.JWT_SECRET,
     {
       expiresIn: "7d",
     }
   );
+
+const getConfiguredSystemRole = (email) => {
+  if (isConfiguredSystemEmail(email)) return "system";
+  if (isConfiguredAdminEmail(email)) return "admin";
+  return "user";
+};
+
+const syncConfiguredAccess = async (user) => {
+  const configuredRole = getConfiguredSystemRole(user.email);
+
+  if (configuredRole === "system") {
+    if (user.systemRole !== "system") {
+      user.systemRole = "system";
+      await user.save();
+    }
+
+    return user;
+  }
+
+  if (user.systemRole === "system") {
+    user.systemRole = configuredRole;
+    await user.save();
+  } else if (configuredRole === "admin" && user.systemRole === "user") {
+    user.systemRole = configuredRole;
+    await user.save();
+  }
+
+  return user;
+};
+
+const serializeAuthUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  photoURL: user.photoURL,
+  roles: getUserRoles(user),
+  role: getPrimaryRole(user),
+  verification: getVerificationMap(user.verification),
+  isAdmin: user.systemRole === "admin",
+  isSystem: user.systemRole === "system",
+  accountStatus: user.accountStatus || "active",
+  profileCompleted: user.profileCompleted,
+});
 
 const getVerifiedFirebaseUser = async (
   idToken,
@@ -56,23 +107,46 @@ const getVerifiedFirebaseUser = async (
       { firebaseUid: decoded.uid },
       { email: decoded.email },
     ],
-  });
+  }).select("+systemRole");
 
   if (!user) {
+    const configuredRole = getConfiguredSystemRole(decoded.email);
     user = await User.create({
       firebaseUid: decoded.uid,
       name: fallbackName,
       email: decoded.email,
       photoURL: decoded.picture || "",
+      systemRole: configuredRole,
     });
 
     return user;
+  }
+
+  if (
+    user.firebaseUid !== decoded.uid &&
+    user.password &&
+    (isConfiguredAdminEmail(decoded.email) ||
+      isConfiguredSystemEmail(decoded.email))
+  ) {
+    const error = new Error(
+      "This operator email is linked to a password-based account. Contact a system operator to safely migrate it."
+    );
+    error.statusCode = 409;
+    throw error;
   }
 
   user.firebaseUid = decoded.uid;
   user.name = user.name || fallbackName;
   user.photoURL =
     user.photoURL || decoded.picture || "";
+
+  if (user.accountStatus === "suspended") {
+    const error = new Error("This account has been suspended. Contact support for help.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  await syncConfiguredAccess(user);
 
   return user.save();
 };
@@ -126,6 +200,15 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    if (
+      isConfiguredAdminEmail(email) ||
+      isConfiguredSystemEmail(email)
+    ) {
+      return res.status(403).json({
+        message: "Operator accounts must be created and verified through Firebase sign-in",
+      });
+    }
+
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
@@ -140,12 +223,13 @@ const registerUser = async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      systemRole: "user",
     });
 
     res.status(201).json({
       message: "User registered successfully",
-      token: createToken(user._id),
-      user,
+      token: createToken(user._id, "password"),
+      user: serializeAuthUser(user),
     });
 
   } catch (error) {
@@ -159,11 +243,23 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select(
+      "+systemRole"
+    );
 
     if (!user) {
       return res.status(400).json({
         message: "User not found",
+      });
+    }
+
+    if (
+      user.systemRole !== "user" ||
+      isConfiguredAdminEmail(user.email) ||
+      isConfiguredSystemEmail(user.email)
+    ) {
+      return res.status(403).json({
+        message: "Operator accounts must sign in through verified Firebase authentication",
       });
     }
 
@@ -178,18 +274,18 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const token = createToken(user._id);
+    if (user.accountStatus === "suspended") {
+      return res.status(403).json({
+        message: "This account has been suspended. Contact support for help.",
+      });
+    }
+
+    const token = createToken(user._id, "password");
 
     res.json({
       message: "Login successful",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        photoURL: user.photoURL,
-        profileCompleted: user.profileCompleted,
-      },
+      user: serializeAuthUser(user),
     });
 
   } catch (error) {
@@ -206,18 +302,12 @@ const googleLogin = async (req, res) => {
       idToken,
       name
     );
-    const token = createToken(user._id);
+    const token = createToken(user._id, "firebase");
 
     res.json({
       message: "Firebase Login Successful",
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        photoURL: user.photoURL,
-        profileCompleted: user.profileCompleted,
-      },
+      user: serializeAuthUser(user),
     });
 
   } catch (error) {

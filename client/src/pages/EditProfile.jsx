@@ -17,6 +17,10 @@ import {
   updateProfile,
 } from "../api/userApi";
 import { auth } from "../firebase";
+import {
+  USER_ROLES,
+  normalizeRoles,
+} from "../utils/roles";
 
 const listToText = (value) =>
   Array.isArray(value) ? value.join(", ") : "";
@@ -41,7 +45,7 @@ function EditProfile() {
   );
   const [formData, setFormData] = useState({
     name: "",
-    role: "",
+    roles: [],
     location: "",
     bio: "",
     skills: "",
@@ -70,7 +74,7 @@ function EditProfile() {
         setProfileCompleted(Boolean(user.profileCompleted));
         setFormData({
           name: user.name || "",
-          role: user.role || "",
+          roles: normalizeRoles(user),
           location: user.location || "",
           bio: user.bio || "",
           skills: listToText(user.skills),
@@ -93,6 +97,19 @@ function EditProfile() {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleRoleToggle = (role) => {
+    setFormData((current) => {
+      const hasRole = current.roles.includes(role);
+
+      return {
+        ...current,
+        roles: hasRole
+          ? current.roles.filter((item) => item !== role)
+          : [...current.roles, role],
+      };
     });
   };
 
@@ -145,7 +162,7 @@ function EditProfile() {
       setSaving(true);
       const res = await updateProfile({
         name: formData.name,
-        role: formData.role,
+        roles: formData.roles,
         location: formData.location,
         bio: formData.bio,
         skills: textToList(formData.skills),
@@ -169,7 +186,7 @@ function EditProfile() {
     } catch (error) {
       alert(
         error.response?.data?.message ||
-          "Update failed"
+        "Update failed"
       );
     } finally {
       setSaving(false);
@@ -182,7 +199,7 @@ function EditProfile() {
     `https://ui-avatars.com/api/?name=${formData.name || "Founder"}`;
   const hasCustomPhoto = Boolean(
     formData.photoURL &&
-      (!googlePhotoURL || formData.photoURL !== googlePhotoURL)
+    (!googlePhotoURL || formData.photoURL !== googlePhotoURL)
   );
   const isCompletionRoute =
     location.pathname === "/complete-profile";
@@ -236,9 +253,8 @@ function EditProfile() {
 
       <form
         onSubmit={handleSubmit}
-        className={`glass-panel p-6 sm:p-8 ${
-          isOnboarding ? "onboarding-card" : ""
-        }`}
+        className={`glass-panel p-6 sm:p-8 ${isOnboarding ? "onboarding-card" : ""
+          }`}
       >
         <section className="mb-8 flex flex-col gap-6 rounded-lg border border-white/10 bg-white/5 p-5 md:flex-row md:items-center">
           <img
@@ -252,7 +268,7 @@ function EditProfile() {
               Profile picture
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              Upload a clear founder photo or logo-style headshot.
+              Upload a clear profile photo or professional headshot.
               This image appears on your profile, founder cards,
               requests, and chat conversations.
             </p>
@@ -290,29 +306,50 @@ function EditProfile() {
 
         <div className="mb-5">
           <h2 className="text-2xl font-black">
-            Founder basics
+            Profile basics
           </h2>
           <p className="mt-2 text-sm text-slate-400">
-            These fields make your profile useful for matching,
-            requests, and collaboration decisions.
+            Choose one or more public roles. Role selection does
+            not verify the role; verification is reviewed by
+            admins separately.
           </p>
+        </div>
+
+        <div className="mb-5 grid gap-3 md:grid-cols-2">
+          {USER_ROLES.map((role) => {
+            const active = formData.roles.includes(role);
+
+            return (
+              <button
+                key={role}
+                type="button"
+                onClick={() => handleRoleToggle(role)}
+                className={`rounded-lg border p-4 text-left transition ${active
+                    ? "border-cyan-300/60 bg-cyan-300/12 text-white"
+                    : "border-white/10 bg-white/5 text-slate-300 hover:border-white/20"
+                  }`}
+              >
+                <span className="font-black">{role}</span>
+                <span className="mt-1 block text-sm text-slate-400">
+                  {role === "Founder"
+                    ? "Build startups, manage ventures, and find collaborators."
+                    : role === "Investor"
+                      ? "Discover startups and investment opportunities."
+                      : role === "Mentor"
+                        ? "Offer guidance, feedback, and domain expertise."
+                        : "Find teams, projects, and collaboration paths."}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="form-grid">
           <input
             type="text"
             name="name"
-            placeholder="Founder name"
+            placeholder="Your name"
             value={formData.name}
-            onChange={handleChange}
-            className="field"
-            required
-          />
-          <input
-            type="text"
-            name="role"
-            placeholder="Role"
-            value={formData.role}
             onChange={handleChange}
             className="field"
             required

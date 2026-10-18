@@ -88,6 +88,12 @@ const sendMessage = async (req, res) => {
       });
     }
 
+    if (receiver.accountStatus === "suspended") {
+      return res.status(404).json({
+        message: "Receiver not found",
+      });
+    }
+
     const chat = await Chat.create({
       sender: req.user.id,
       receiver: receiverId,

@@ -7,6 +7,7 @@ import {
   FaHandshake,
   FaLocationDot,
   FaPen,
+  FaShieldHalved,
   FaTrash,
   FaUsers,
 } from "react-icons/fa6";
@@ -18,11 +19,17 @@ import {
   getStartupById,
   removeTeamMember,
 } from "../api/startupApi";
+import ReportTargetButton from "../components/ReportTargetButton";
 import {
   getCurrentUserId,
   isAuthenticated,
 } from "../utils/session";
 import { normalizeExternalUrl } from "../utils/links";
+import {
+  getRoleLabel,
+  isVerifiedForRole,
+  normalizeRoles,
+} from "../utils/roles";
 
 function StartupDetails() {
   const { id } = useParams();
@@ -228,6 +235,13 @@ function StartupDetails() {
                 Message Founder
               </Link>
             )}
+            {!isFounder && (
+              <ReportTargetButton
+                targetType="startup"
+                targetId={startup._id}
+                targetName={startup.title}
+              />
+            )}
           </div>
         </div>
 
@@ -368,6 +382,17 @@ function StartupDetails() {
               <p className="text-sm text-slate-400">
                 {startup.founder.email}
               </p>
+              <p className="text-sm text-cyan-200">
+                {getRoleLabel(startup.founder)}
+              </p>
+              {normalizeRoles(startup.founder).some((role) =>
+                isVerifiedForRole(startup.founder, role)
+              ) && (
+                <span className="chip chip-mint mt-2">
+                  <FaShieldHalved />
+                  Verified
+                </span>
+              )}
             </div>
           </div>
         </div>

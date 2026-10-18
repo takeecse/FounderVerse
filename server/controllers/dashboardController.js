@@ -4,31 +4,63 @@ const User = require("../models/User");
 
 const getDashboardStats = async (req, res) => {
   try {
-    const startupCount = await Startup.countDocuments({
-      founder: req.user.id,
-    });
-
-    const receivedRequests =
-      await Request.countDocuments({
-        receiver: req.user.id,
-      });
-
-    const acceptedRequests =
-      await Request.countDocuments({
-        receiver: req.user.id,
+    const userId = req.user.id;
+    const [
+      startupCount,
+      receivedRequests,
+      sentRequests,
+      pendingReceivedRequests,
+      acceptedRequests,
+      acceptedSentRequests,
+      openStartupsCount,
+      fundingOpportunities,
+      user,
+    ] = await Promise.all([
+      Startup.countDocuments({ founder: userId }),
+      Request.countDocuments({ receiver: userId }),
+      Request.countDocuments({ sender: userId }),
+      Request.countDocuments({
+        receiver: userId,
+        status: "pending",
+      }),
+      Request.countDocuments({
+        receiver: userId,
         status: "accepted",
-      });
-
-    const user = await User.findById(
-      req.user.id
-    );
+      }),
+      Request.countDocuments({
+        sender: userId,
+        status: "accepted",
+      }),
+      Startup.countDocuments({
+        status: "Open",
+        isHiring: true,
+        $or: [
+          { moderationStatus: "published" },
+          { moderationStatus: { $exists: false } },
+        ],
+      }),
+      Startup.countDocuments({
+        fundingNeeded: { $nin: ["", null] },
+        $or: [
+          { moderationStatus: "published" },
+          { moderationStatus: { $exists: false } },
+        ],
+      }),
+      User.findById(userId).select("executionScore connections"),
+    ]);
 
     res.json({
       startupCount,
       receivedRequests,
+      sentRequests,
+      pendingReceivedRequests,
       acceptedRequests,
+      acceptedSentRequests,
+      activeConnections: user.connections?.length || 0,
+      openStartupsCount,
+      fundingOpportunities,
       executionScore:
-        user.executionScore || 0,
+        user?.executionScore || 0,
     });
 
   } catch (error) {

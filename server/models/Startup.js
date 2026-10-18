@@ -77,6 +77,12 @@ const startupSchema = new mongoose.Schema(
       default: "Open",
     },
 
+    moderationStatus: {
+      type: String,
+      enum: ["published", "hidden"],
+      default: "published",
+    },
+
     founder: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

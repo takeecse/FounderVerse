@@ -3,6 +3,9 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const dotenv = require("dotenv");
+
+dotenv.config();
+
 const jwt = require("jsonwebtoken");
 const userRoutes = require("./routes/userRoutes");
 const connectDB = require("./config/db");
@@ -13,8 +16,10 @@ const requestRoutes = require("./routes/requestRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const chatRoutes = require("./routes/chatRoutes");
-
-dotenv.config();
+const verificationRoutes = require("./routes/verificationRoutes");
+const adminRoutes = require("./routes/adminRoutes");
+const systemRoutes = require("./routes/systemRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 connectDB();
 
@@ -78,7 +83,7 @@ const corsOptions = {
 
     callback(new Error("Not allowed by CORS"));
   },
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
 };
 
 const io = new Server(server, {
@@ -96,6 +101,10 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/verification", verificationRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/system", systemRoutes);
+app.use("/api/reports", reportRoutes);
 
 io.use(async (socket, next) => {
   try {
@@ -113,10 +122,10 @@ io.use(async (socket, next) => {
     );
     const user = await User.findById(
       decoded.id
-    ).select("_id");
+    ).select("_id accountStatus");
 
-    if (!user) {
-      return next(new Error("User not found"));
+    if (!user || user.accountStatus === "suspended") {
+      return next(new Error("User account is unavailable"));
     }
 
     socket.user = {

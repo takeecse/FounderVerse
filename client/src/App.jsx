@@ -5,6 +5,8 @@ import {
   useLocation,
 } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import SystemDashboard from "./pages/SystemDashboard";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -20,6 +22,7 @@ import Requests from "./pages/Requests";
 import SentRequests from "./pages/SentRequests";
 import EditStartup from "./pages/EditStartup";
 import Notifications from "./pages/Notifications";
+import Verification from "./pages/Verification";
 import Chat from "./pages/Chat";
 import Connections from "./pages/Connections";
 import Navbar from "./components/Navbar";
@@ -51,6 +54,14 @@ function AppLayout() {
             <Route
               path="/dashboard"
               element={privatePage(<Dashboard />)}
+            />
+            <Route
+              path="/admin"
+              element={privatePage(<AdminDashboard />)}
+            />
+            <Route
+              path="/system"
+              element={privatePage(<SystemDashboard />)}
             />
             <Route
               path="/profile"
@@ -101,6 +112,10 @@ function AppLayout() {
             <Route
               path="/notifications"
               element={privatePage(<Notifications />)}
+            />
+            <Route
+              path="/verification"
+              element={privatePage(<Verification />)}
             />
             <Route
               path="/chat"

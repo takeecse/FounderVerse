@@ -45,6 +45,12 @@ const sendRequest = async (req, res) => {
       });
     }
 
+    if (receiver.accountStatus === "suspended") {
+      return res.status(404).json({
+        message: "Receiver not found",
+      });
+    }
+
     let startup = null;
 
     if (startupId) {

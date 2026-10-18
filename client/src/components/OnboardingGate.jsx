@@ -39,7 +39,13 @@ function OnboardingGate({ children }) {
 
         if (mounted) {
           setProfileCompleted(
-            Boolean(res.data?.profileCompleted)
+            Boolean(
+              res.data?.profileCompleted ||
+                ((res.data?.isAdmin || res.data?.isSystem) &&
+                  ["/admin", "/system"].some((path) =>
+                    location.pathname.startsWith(path)
+                  ))
+            )
           );
         }
       } catch (error) {

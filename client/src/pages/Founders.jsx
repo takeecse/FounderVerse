@@ -4,14 +4,22 @@ import {
   FaArrowRight,
   FaLocationDot,
   FaMagnifyingGlass,
+  FaShieldHalved,
   FaStar,
 } from "react-icons/fa6";
 import { getAllUsers } from "../api/userApi";
+import {
+  getRoleLabel,
+  isVerifiedForRole,
+  normalizeRoles,
+  USER_ROLES,
+} from "../utils/roles";
 
 function Founders() {
   const [users, setUsers] = useState([]);
   const [nameSearch, setNameSearch] = useState("");
   const [skillSearch, setSkillSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("Founder");
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -41,22 +49,24 @@ function Founders() {
               .includes(skillSearch.toLowerCase())
           );
 
-        return matchesName && matchesSkill;
+        const matchesRole =
+          roleFilter === "all" || normalizeRoles(user).includes(roleFilter);
+
+        return matchesName && matchesSkill && matchesRole;
       }),
-    [users, nameSearch, skillSearch]
+    [users, nameSearch, skillSearch, roleFilter]
   );
 
   return (
     <div className="page-shell page-wide">
       <div className="section-head">
         <div>
-          <p className="eyebrow">Founder discovery</p>
+          <p className="eyebrow">Stakeholder discovery</p>
           <h1 className="page-title">
-            Discover Founders
+            Discover Members
           </h1>
           <p className="page-subtitle">
-            Search for builders by name, role, skills, and
-            startup intent.
+            Find founders, investors, mentors, and collaborators by role, skills, and startup intent.
           </p>
         </div>
         <span className="chip chip-mint">
@@ -64,12 +74,12 @@ function Founders() {
         </span>
       </div>
 
-      <section className="glass-panel mb-8 grid gap-4 p-4 md:grid-cols-2">
+      <section className="glass-panel mb-8 grid gap-4 p-4 md:grid-cols-3">
         <label className="relative">
           <FaMagnifyingGlass className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
-            placeholder="Search founder..."
+            placeholder="Search member..."
             value={nameSearch}
             onChange={(e) =>
               setNameSearch(e.target.value)
@@ -89,6 +99,18 @@ function Founders() {
             }
             className="field field-with-icon"
           />
+        </label>
+
+        <label>
+          <span className="sr-only">Filter by stakeholder role</span>
+          <select
+            value={roleFilter}
+            onChange={(event) => setRoleFilter(event.target.value)}
+            className="select px-3"
+          >
+            <option value="all">All stakeholder roles</option>
+            {USER_ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+          </select>
         </label>
       </section>
 
@@ -113,8 +135,16 @@ function Founders() {
                   {user.name}
                 </h2>
                 <p className="mt-1 text-cyan-200">
-                  {user.role || "Founder"}
+                  {getRoleLabel(user)}
                 </p>
+                {normalizeRoles(user).some((role) =>
+                  isVerifiedForRole(user, role)
+                ) && (
+                  <span className="chip chip-mint mt-2">
+                    <FaShieldHalved />
+                    Verified
+                  </span>
+                )}
                 <p className="mt-2 flex items-center gap-2 text-sm text-slate-400">
                   <FaLocationDot />
                   {user.location || "Remote"}
