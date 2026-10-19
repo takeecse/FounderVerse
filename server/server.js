@@ -21,8 +21,6 @@ const adminRoutes = require("./routes/adminRoutes");
 const systemRoutes = require("./routes/systemRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 
-connectDB();
-
 const app = express();
 const server = http.createServer(app);
 
@@ -159,6 +157,11 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+  await connectDB();
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+startServer();

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Link,
   Navigate,
@@ -38,8 +38,11 @@ function EditProfile() {
   const location = useLocation();
   const [saving, setSaving] = useState(false);
   const [imageError, setImageError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState("");
   const [profileCompleted, setProfileCompleted] =
     useState(null);
+  const fieldRefs = useRef({});
   const [googlePhotoURL, setGooglePhotoURL] = useState(
     auth.currentUser?.photoURL || ""
   );
@@ -94,13 +97,28 @@ function EditProfile() {
   }, []);
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+    setFieldErrors((current) => {
+      if (!current[name]) return current;
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
+    setFormError("");
   };
 
   const handleRoleToggle = (role) => {
+    setFieldErrors((current) => {
+      if (!current.roles) return current;
+      const next = { ...current };
+      delete next.roles;
+      return next;
+    });
+    setFormError("");
     setFormData((current) => {
       const hasRole = current.roles.includes(role);
 
@@ -111,6 +129,35 @@ function EditProfile() {
           : [...current.roles, role],
       };
     });
+  };
+
+  const focusField = (fieldName) => {
+    const field = fieldRefs.current[fieldName];
+
+    if (!field) return;
+
+    field.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+    field.focus({ preventScroll: true });
+  };
+
+  const focusFirstError = (errors) => {
+    const firstField = [
+      "roles",
+      "name",
+      "location",
+      "bio",
+      "skills",
+      "interests",
+      "lookingFor",
+      "github",
+      "linkedin",
+      "portfolio",
+    ].find((field) => errors[field]);
+
+    if (firstField) focusField(firstField);
   };
 
   const handleImageUpload = (e) => {
@@ -157,6 +204,28 @@ function EditProfile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError("");
+
+    const validationErrors = {};
+
+    if (!formData.name.trim()) {
+      validationErrors.name = "Enter your name.";
+    }
+
+    if (formData.roles.length === 0) {
+      validationErrors.roles = "Select one of the role cards below to continue.";
+    }
+
+    if (!formData.location.trim()) {
+      validationErrors.location = "Enter your location.";
+    }
+
+    setFieldErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
+      focusFirstError(validationErrors);
+      return;
+    }
 
     try {
       setSaving(true);
@@ -174,20 +243,60 @@ function EditProfile() {
         photoURL: formData.photoURL,
       });
 
+      if (!res.data?.profileCompleted) {
+        setFormError(
+          "Your profile details were saved, but setup is not marked complete yet. Please check the required information and try again."
+        );
+        return;
+      }
+
+      setProfileCompleted(true);
+
       window.dispatchEvent(
         new CustomEvent("founderverse:profile-updated", {
           detail: res.data,
         })
       );
 
-      navigate(profileCompleted ? "/profile" : "/", {
-        replace: !profileCompleted,
-      });
+      navigate("/", { replace: true });
     } catch (error) {
-      alert(
-        error.response?.data?.message ||
-        "Update failed"
+      const missingFields =
+        error.response?.data?.missingFields || [];
+      const serverErrors = missingFields.reduce(
+        (errors, field) => {
+          const labels = {
+            name: "Enter your name.",
+            roles: "Select one of the role cards below to continue.",
+            location: "Enter your location.",
+            bio: "Add a short introduction.",
+            skills: "Add your skills.",
+            interests: "Add your interests.",
+            lookingFor: "Tell us who you are looking for.",
+          };
+
+          if (labels[field]) errors[field] = labels[field];
+          return errors;
+        },
+        {}
       );
+
+      if (
+        error.response?.data?.message?.includes(
+          "choose at least one public role"
+        )
+      ) {
+        serverErrors.roles = "Select one of the role cards below to continue.";
+      }
+
+      if (Object.keys(serverErrors).length > 0) {
+        setFieldErrors(serverErrors);
+        focusFirstError(serverErrors);
+      } else {
+        setFormError(
+          error.response?.data?.message ||
+            "Could not save your profile. Please try again."
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -207,12 +316,12 @@ function EditProfile() {
     isCompletionRoute || profileCompleted === false;
 
   if (
-    profileCompleted &&
-    isCompletionRoute &&
-    !saving
-  ) {
-    return <Navigate to="/profile" replace />;
-  }
+  profileCompleted &&
+  isCompletionRoute &&
+  !saving
+) {
+  return <Navigate to="/" replace />;
+}
 
   if (profileCompleted === null) {
     return (
@@ -253,6 +362,7 @@ function EditProfile() {
 
       <form
         onSubmit={handleSubmit}
+        noValidate
         className={`glass-panel p-6 sm:p-8 ${isOnboarding ? "onboarding-card" : ""
           }`}
       >
@@ -265,7 +375,7 @@ function EditProfile() {
 
           <div className="flex-1">
             <h2 className="text-2xl font-black">
-              Profile picture
+              Profile picture (optional)
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
               Upload a clear profile photo or professional headshot.
@@ -309,91 +419,149 @@ function EditProfile() {
             Profile basics
           </h2>
           <p className="mt-2 text-sm text-slate-400">
-            Choose one or more public roles. Role selection does
-            not verify the role; verification is reviewed by
-            admins separately.
+            Start with your name, role, and location. You can add
+            more profile details later.
+          </p>
+          <p className="mt-2 text-sm text-cyan-100">
+            Name, one role, and location are required.
           </p>
         </div>
 
-        <div className="mb-5 grid gap-3 md:grid-cols-2">
-          {USER_ROLES.map((role) => {
-            const active = formData.roles.includes(role);
+        <fieldset
+          aria-invalid={Boolean(fieldErrors.roles)}
+          aria-describedby={fieldErrors.roles ? "roles-error" : undefined}
+          className={`mb-5 min-w-0 rounded-lg border p-4 sm:p-5 ${fieldErrors.roles ? "border-rose-300/70 bg-rose-300/5" : "border-white/10 bg-white/5"}`}
+        >
+          <legend className="px-2 text-lg font-black">
+            Choose your role <span className="text-sm font-bold text-cyan-100">(required)</span>
+          </legend>
+          <p className="text-sm text-slate-400">
+            Select at least one role card. This choice does not verify the role; verification is reviewed by admins separately.
+          </p>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            {USER_ROLES.map((role) => {
+              const active = formData.roles.includes(role);
 
-            return (
-              <button
-                key={role}
-                type="button"
-                onClick={() => handleRoleToggle(role)}
-                className={`rounded-lg border p-4 text-left transition ${active
+              return (
+                <button
+                  key={role}
+                  ref={role === USER_ROLES[0] ? (element) => {
+                    fieldRefs.current.roles = element;
+                  } : undefined}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => handleRoleToggle(role)}
+                  className={`rounded-lg border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${active
                     ? "border-cyan-300/60 bg-cyan-300/12 text-white"
                     : "border-white/10 bg-white/5 text-slate-300 hover:border-white/20"
                   }`}
-              >
-                <span className="font-black">{role}</span>
-                <span className="mt-1 block text-sm text-slate-400">
-                  {role === "Founder"
-                    ? "Build startups, manage ventures, and find collaborators."
-                    : role === "Investor"
-                      ? "Discover startups and investment opportunities."
-                      : role === "Mentor"
-                        ? "Offer guidance, feedback, and domain expertise."
-                        : "Find teams, projects, and collaboration paths."}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                >
+                  <span className="font-black">{role}</span>
+                  <span className="mt-1 block text-sm text-slate-400">
+                    {role === "Founder"
+                      ? "Build startups, manage ventures, and find collaborators."
+                      : role === "Investor"
+                        ? "Discover startups and investment opportunities."
+                        : role === "Mentor"
+                          ? "Offer guidance, feedback, and domain expertise."
+                          : "Find teams, projects, and collaboration paths."}
+                  </span>
+                  {active && (
+                    <span className="mt-3 block text-xs font-black uppercase tracking-wide text-cyan-100">
+                      Selected
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          {fieldErrors.roles && (
+            <p id="roles-error" className="mt-4 text-sm font-bold text-rose-200" role="alert">
+              {fieldErrors.roles}
+            </p>
+          )}
+        </fieldset>
 
         <div className="form-grid">
+          <div>
+            <input
+              ref={(element) => {
+                fieldRefs.current.name = element;
+              }}
+              type="text"
+              name="name"
+              placeholder="Your name (required)"
+              value={formData.name}
+              onChange={handleChange}
+              className="field"
+              required
+              aria-invalid={Boolean(fieldErrors.name)}
+              aria-describedby={fieldErrors.name ? "name-error" : undefined}
+            />
+            {fieldErrors.name && (
+              <p id="name-error" className="mt-2 text-sm font-bold text-rose-200" role="alert">
+                {fieldErrors.name}
+              </p>
+            )}
+          </div>
+          <div>
+            <input
+              ref={(element) => {
+                fieldRefs.current.location = element;
+              }}
+              type="text"
+              name="location"
+              placeholder="Location (required)"
+              value={formData.location}
+              onChange={handleChange}
+              className="field"
+              required
+              aria-invalid={Boolean(fieldErrors.location)}
+              aria-describedby={fieldErrors.location ? "location-error" : undefined}
+            />
+            {fieldErrors.location && (
+              <p id="location-error" className="mt-2 text-sm font-bold text-rose-200" role="alert">
+                {fieldErrors.location}
+              </p>
+            )}
+          </div>
           <input
-            type="text"
-            name="name"
-            placeholder="Your name"
-            value={formData.name}
-            onChange={handleChange}
-            className="field"
-            required
-          />
-          <input
-            type="text"
-            name="location"
-            placeholder="Location"
-            value={formData.location}
-            onChange={handleChange}
-            className="field"
-            required
-          />
-          <input
+            ref={(element) => {
+              fieldRefs.current.skills = element;
+            }}
             type="text"
             name="skills"
-            placeholder="Skills: React, Growth, UX"
+            placeholder="Skills (optional): React, Growth, UX"
             value={formData.skills}
             onChange={handleChange}
             className="field"
-            required
           />
           <input
+            ref={(element) => {
+              fieldRefs.current.interests = element;
+            }}
             type="text"
             name="interests"
-            placeholder="Interests: AI, SaaS, FinTech"
+            placeholder="Interests (optional): AI, SaaS, FinTech"
             value={formData.interests}
             onChange={handleChange}
             className="field"
-            required
           />
           <input
+            ref={(element) => {
+              fieldRefs.current.lookingFor = element;
+            }}
             type="text"
             name="lookingFor"
-            placeholder="Looking for: Designer, Marketer"
+            placeholder="Looking for (optional): Designer, Marketer"
             value={formData.lookingFor}
             onChange={handleChange}
             className="field"
-            required
           />
           <input
             type="text"
             name="github"
-            placeholder="GitHub URL"
+            placeholder="GitHub URL (optional)"
             value={formData.github}
             onChange={handleChange}
             className="field"
@@ -401,7 +569,7 @@ function EditProfile() {
           <input
             type="text"
             name="linkedin"
-            placeholder="LinkedIn URL"
+            placeholder="LinkedIn URL (optional)"
             value={formData.linkedin}
             onChange={handleChange}
             className="field"
@@ -409,7 +577,7 @@ function EditProfile() {
           <input
             type="text"
             name="portfolio"
-            placeholder="Portfolio URL"
+            placeholder="Portfolio URL (optional)"
             value={formData.portfolio}
             onChange={handleChange}
             className="field md:col-span-2"
@@ -417,13 +585,21 @@ function EditProfile() {
         </div>
 
         <textarea
+          ref={(element) => {
+            fieldRefs.current.bio = element;
+          }}
           name="bio"
-          placeholder="Tell founders about your background, strengths, and goals."
+          placeholder="Short bio (optional): share your background, strengths, and goals."
           value={formData.bio}
           onChange={handleChange}
           className="textarea mt-4"
-          required
         />
+
+        {formError && (
+          <p className="mt-4 rounded-lg border border-rose-300/30 bg-rose-300/10 p-3 text-sm font-bold text-rose-100" role="alert">
+            {formError}
+          </p>
+        )}
 
         <div className="mt-6 rounded-lg border border-cyan-300/20 bg-cyan-300/10 p-5">
           <h3 className="text-xl font-black">

@@ -10,10 +10,6 @@ const REQUIRED_PROFILE_FIELDS = [
   "name",
   "roles",
   "location",
-  "bio",
-  "skills",
-  "interests",
-  "lookingFor",
 ];
 
 const cleanText = (value) =>
@@ -101,6 +97,9 @@ const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
 
+    console.log("PROFILE UPDATE BODY:", req.body);
+console.log("ROLES RECEIVED:", req.body.roles, req.body.role);
+
     if (!user) {
       return res.status(404).json({
         message: "User not found",
@@ -141,6 +140,7 @@ const updateProfile = async (req, res) => {
         return res.status(400).json({
           message:
             "Please choose at least one public role",
+          missingFields: ["roles"],
         });
       }
 
@@ -202,6 +202,15 @@ const updateProfile = async (req, res) => {
     const userResponse = await User.findById(
       req.user.id
     ).select("-password +systemRole");
+
+    if (
+      !userResponse?.profileCompleted ||
+      getUserRoles(userResponse).length === 0
+    ) {
+      return res.status(500).json({
+        message: "The profile could not be confirmed as saved. Please try again.",
+      });
+    }
 
     res.json(
       serializeUser(userResponse, {

@@ -23,6 +23,15 @@ function OnboardingGate({ children }) {
   useEffect(() => {
     let mounted = true;
 
+    const isProfileComplete = (profile) =>
+      Boolean(
+        profile?.profileCompleted ||
+          ((profile?.isAdmin || profile?.isSystem) &&
+            ["/admin", "/system"].some((path) =>
+              location.pathname.startsWith(path)
+            ))
+      );
+
     const checkProfile = async () => {
       if (!isAuthenticated()) {
         if (mounted) {
@@ -38,15 +47,7 @@ function OnboardingGate({ children }) {
         const res = await getProfile();
 
         if (mounted) {
-          setProfileCompleted(
-            Boolean(
-              res.data?.profileCompleted ||
-                ((res.data?.isAdmin || res.data?.isSystem) &&
-                  ["/admin", "/system"].some((path) =>
-                    location.pathname.startsWith(path)
-                  ))
-            )
-          );
+          setProfileCompleted(isProfileComplete(res.data));
         }
       } catch (error) {
         console.error(error);
@@ -62,6 +63,16 @@ function OnboardingGate({ children }) {
       }
     };
 
+    const handleProfileUpdated = (event) => {
+      if (event.detail) {
+        setProfileCompleted(isProfileComplete(event.detail));
+        setChecking(false);
+        return;
+      }
+
+      checkProfile();
+    };
+
     checkProfile();
 
     window.addEventListener(
@@ -70,7 +81,7 @@ function OnboardingGate({ children }) {
     );
     window.addEventListener(
       "founderverse:profile-updated",
-      checkProfile
+      handleProfileUpdated
     );
 
     return () => {
@@ -81,7 +92,7 @@ function OnboardingGate({ children }) {
       );
       window.removeEventListener(
         "founderverse:profile-updated",
-        checkProfile
+        handleProfileUpdated
       );
     };
   }, [authenticated, location.pathname]);
