@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   createStartup,
   getStartups,
+  getRecommendedStartups,
   getMyStartups,
   getStartupById,
   updateStartup,
@@ -13,9 +14,17 @@ const {
 
 const {
   protect,
+  optionalProtect,
 } = require("../middleware/authMiddleware");
 
-router.get("/", getStartups);
+router.get("/", optionalProtect, getStartups);
+
+// must stay above "/:id", otherwise "recommended" is treated as an id
+router.get(
+  "/recommended",
+  protect,
+  getRecommendedStartups
+);
 
 router.get(
   "/my",

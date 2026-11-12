@@ -15,6 +15,7 @@ import {
 import { getDashboardStats } from "../api/dashboardApi";
 import { getNotifications } from "../api/notificationApi";
 import { getProfile } from "../api/userApi";
+import RecommendedStartups from "../components/RecommendedStartups";
 import {
   getPrimaryRole,
   getRoleLabel,
@@ -293,6 +294,8 @@ function Dashboard() {
           </div>
         ))}
       </section>
+
+      <RecommendedStartups />
 
       <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="glass-panel p-6">

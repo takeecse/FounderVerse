@@ -12,8 +12,25 @@ export const createStartup = async (startupData) => {
   });
 };
 
-export const getStartups = async () => {
-  return axios.get(API);
+// params: { q, industry, stage, hiring, sort, page, limit }
+// The token is optional: logged-in users get "best match" ordering.
+export const getStartups = async (params = {}) => {
+  const token = localStorage.getItem("token");
+
+  return axios.get(API, {
+    params,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+};
+
+export const getRecommendedStartups = async () => {
+  const token = localStorage.getItem("token");
+
+  return axios.get(`${API}/recommended`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 };
 
 export const getMyStartups = async () => {

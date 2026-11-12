@@ -73,6 +73,31 @@ const protect = async (req, res, next) => {
   }
 };
 
+// For public routes: if a valid token is sent we know who the user is
+// (so results can be personalised), otherwise they are treated as a guest.
+const optionalProtect = async (req, res, next) => {
+  try {
+    const header = req.headers.authorization;
+
+    if (header && header.startsWith("Bearer")) {
+      const decoded = jwt.verify(
+        header.split(" ")[1],
+        process.env.JWT_SECRET
+      );
+
+      const user = await User.findById(decoded.id).select("-password");
+
+      if (user && user.accountStatus !== "suspended") {
+        req.user = { id: user._id.toString(), profile: user };
+      }
+    }
+  } catch (error) {
+    // invalid or expired token: continue as a guest
+  }
+
+  next();
+};
+
 const requireAdmin = (req, res, next) => {
   if (
     !["admin", "system"].includes(req.user?.profile?.systemRole) ||
@@ -101,6 +126,7 @@ const requireSystem = (req, res, next) => {
 
 module.exports = {
   protect,
+  optionalProtect,
   requireAdmin,
   requireSystem,
 };
