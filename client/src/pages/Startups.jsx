@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FaArrowRight,
@@ -8,53 +8,95 @@ import {
 } from "react-icons/fa6";
 import { getStartups } from "../api/startupApi";
 
-function Startups() {
-  const [startups, setStartups] = useState([]);
-  const [titleSearch, setTitleSearch] = useState("");
-  const [industrySearch, setIndustrySearch] =
-    useState("");
-  const [techSearch, setTechSearch] = useState("");
+const STAGES = ["Idea", "MVP", "Beta", "Growth", "Scaling"];
 
+function Startups() {
+  // Logged-in users see the startups that match their profile first
+  const isLoggedIn = Boolean(localStorage.getItem("token"));
+
+  // What the user is typing right now
+  const [filters, setFilters] = useState({
+    q: "",
+    industry: "",
+    stage: "",
+    hiring: false,
+    sort: isLoggedIn ? "relevance" : "newest",
+  });
+
+  // The filters we actually send to the server (updated after a short pause)
+  const [appliedFilters, setAppliedFilters] = useState(filters);
+
+  const [page, setPage] = useState(1);
+  const [result, setResult] = useState({
+    startups: [],
+    total: 0,
+    totalPages: 1,
+  });
+  const [loading, setLoading] = useState(true);
+
+  const { startups, total, totalPages } = result;
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+
+    setFilters((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters((prev) => ({
+      ...prev,
+      q: "",
+      industry: "",
+      stage: "",
+      hiring: false,
+    }));
+  };
+
+  // Debounce: wait 400ms after the user stops typing, then search.
+  // This avoids sending one request for every single letter.
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setAppliedFilters(filters);
+      setPage(1); // new search always starts from page 1
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [filters]);
+
+  // Ask the server for startups whenever the search or page changes
+  useEffect(() => {
+    let ignore = false; // ignore old responses if a newer search started
+
     const fetchStartups = async () => {
+      setLoading(true);
+
       try {
-        const res = await getStartups();
-        setStartups(res.data);
+        const res = await getStartups({ ...appliedFilters, page });
+
+        if (!ignore) {
+          setResult(res.data);
+        }
       } catch (error) {
         console.error(error);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     };
 
     fetchStartups();
-  }, []);
 
-  const filteredStartups = useMemo(
-    () =>
-      startups.filter((startup) => {
-        const matchesTitle = startup.title
-          ?.toLowerCase()
-          .includes(titleSearch.toLowerCase());
+    return () => {
+      ignore = true;
+    };
+  }, [appliedFilters, page]);
 
-        const matchesIndustry =
-          !industrySearch ||
-          startup.industry
-            ?.toLowerCase()
-            .includes(industrySearch.toLowerCase());
-
-        const matchesTech =
-          !techSearch ||
-          startup.techStack?.some((tech) =>
-            tech
-              .toLowerCase()
-              .includes(techSearch.toLowerCase())
-          );
-
-        return (
-          matchesTitle && matchesIndustry && matchesTech
-        );
-      }),
-    [startups, titleSearch, industrySearch, techSearch]
-  );
+  const hasFilters =
+    filters.q || filters.industry || filters.stage || filters.hiring;
 
   return (
     <div className="page-shell page-wide">
@@ -70,48 +112,91 @@ function Startups() {
           </p>
         </div>
         <span className="chip chip-mint">
-          {filteredStartups.length} startups
+          {total} startups
         </span>
       </div>
 
-      <section className="glass-panel mb-8 grid gap-4 p-4 md:grid-cols-3">
-        {[
-          {
-            value: titleSearch,
-            setValue: setTitleSearch,
-            placeholder: "Search startup...",
-          },
-          {
-            value: industrySearch,
-            setValue: setIndustrySearch,
-            placeholder: "Industry...",
-          },
-          {
-            value: techSearch,
-            setValue: setTechSearch,
-            placeholder: "Tech stack...",
-          },
-        ].map((field) => (
-          <label
-            key={field.placeholder}
-            className="relative"
+      <section className="glass-panel mb-8 grid gap-4 p-4 md:grid-cols-4">
+        <label className="relative md:col-span-2">
+          <FaMagnifyingGlass className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            name="q"
+            placeholder="Search name, tech, description..."
+            value={filters.q}
+            onChange={handleChange}
+            className="field field-with-icon"
+          />
+        </label>
+
+        <input
+          type="text"
+          name="industry"
+          placeholder="Industry..."
+          value={filters.industry}
+          onChange={handleChange}
+          className="field"
+        />
+
+        <select
+          name="stage"
+          value={filters.stage}
+          onChange={handleChange}
+          className="select"
+        >
+          <option value="">All stages</option>
+          {STAGES.map((stage) => (
+            <option key={stage} value={stage}>
+              {stage}
+            </option>
+          ))}
+        </select>
+
+        <label className="flex items-center gap-3 text-slate-300">
+          <input
+            type="checkbox"
+            name="hiring"
+            checked={filters.hiring}
+            onChange={handleChange}
+          />
+          Hiring only
+        </label>
+
+        {isLoggedIn && (
+          <select
+            name="sort"
+            value={filters.sort}
+            onChange={handleChange}
+            className="select"
           >
-            <FaMagnifyingGlass className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input
-              type="text"
-              placeholder={field.placeholder}
-              value={field.value}
-              onChange={(e) =>
-                field.setValue(e.target.value)
-              }
-              className="field field-with-icon"
-            />
-          </label>
-        ))}
+            <option value="relevance">Best match for me</option>
+            <option value="newest">Newest first</option>
+          </select>
+        )}
+
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="btn btn-secondary md:col-span-2"
+          >
+            Clear filters
+          </button>
+        )}
       </section>
 
+      {loading && (
+        <p className="mb-4 text-slate-400">Searching...</p>
+      )}
+
+      {!loading && startups.length === 0 && (
+        <p className="glass-panel p-6 text-slate-400">
+          No startups found. Try a different keyword or clear the filters.
+        </p>
+      )}
+
       <section className="grid gap-5">
-        {filteredStartups.map((startup) => (
+        {startups.map((startup) => (
           <Link
             key={startup._id}
             to={`/startups/${startup._id}`}
@@ -165,6 +250,12 @@ function Startups() {
               ))}
             </div>
 
+            {startup.matchedTerms?.length > 0 && (
+              <p className="mt-4 text-sm text-emerald-300">
+                Matches your profile: {startup.matchedTerms.join(", ")}
+              </p>
+            )}
+
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5 text-sm text-slate-400">
               <div className="flex flex-wrap gap-4">
                 <span>
@@ -189,6 +280,32 @@ function Startups() {
           </Link>
         ))}
       </section>
+
+      {totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-center gap-4">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            Previous
+          </button>
+
+          <span className="text-slate-400">
+            Page {page} of {totalPages}
+          </span>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }
