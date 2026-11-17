@@ -16,7 +16,12 @@ const getDashboardStats = async (req, res) => {
       fundingOpportunities,
       user,
     ] = await Promise.all([
-      Startup.countDocuments({ founder: userId }),
+      Startup.countDocuments({
+        $or: [
+          { founder: userId },
+          { teamMemberRoles: { $elemMatch: { user: userId, isAdmin: true } } },
+        ],
+      }),
       Request.countDocuments({ receiver: userId }),
       Request.countDocuments({ sender: userId }),
       Request.countDocuments({

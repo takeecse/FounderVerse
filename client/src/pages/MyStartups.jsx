@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  FaCircleCheck,
   FaEye,
   FaPen,
   FaPlus,
@@ -25,6 +26,8 @@ function MyStartups() {
     };
 
     fetchMyStartups();
+    window.addEventListener("founderverse:verification-updated", fetchMyStartups);
+    return () => window.removeEventListener("founderverse:verification-updated", fetchMyStartups);
   }, []);
 
   const handleDelete = async (id) => {
@@ -94,8 +97,13 @@ function MyStartups() {
                     className="avatar h-16 w-16"
                   />
                   <div>
-                    <h2 className="text-3xl font-black">
+                    <h2 className="flex flex-wrap items-center gap-2 text-3xl font-black">
                       {startup.title}
+                      {startup.verificationStatus === "verified" && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-sky-300/30 bg-sky-300/10 px-2 py-1 text-xs font-bold text-sky-100">
+                          <FaCircleCheck /> Verified
+                        </span>
+                      )}
                     </h2>
                     <p className="mt-2 text-cyan-200">
                       {startup.tagline}
@@ -104,6 +112,9 @@ function MyStartups() {
                       {startup.location || "Remote"} ·{" "}
                       {startup.industry || "Industry not set"}
                     </p>
+                    {startup.viewerPermissions?.isAdmin && !startup.viewerPermissions?.isFounder && (
+                      <span className="chip chip-mint mt-3">Startup admin</span>
+                    )}
                   </div>
                 </div>
 
@@ -134,16 +145,21 @@ function MyStartups() {
                   <FaPen />
                   Edit
                 </Link>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleDelete(startup._id)
-                  }
-                  className="btn btn-danger"
-                >
-                  <FaTrash />
-                  Delete
-                </button>
+                {startup.viewerPermissions?.isFounder && (
+                  <>
+                    <Link to={`/verification/startup?startupId=${startup._id}`} className="btn btn-secondary">
+                      {startup.verificationStatus === "pending" ? "Verification in review" : startup.verificationStatus === "verified" ? "Manage verification" : "Verify startup"}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(startup._id)}
+                      className="btn btn-danger"
+                    >
+                      <FaTrash />
+                      Delete
+                    </button>
+                  </>
+                )}
               </div>
             </article>
           ))}

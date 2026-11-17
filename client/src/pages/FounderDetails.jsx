@@ -3,17 +3,20 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   FaArrowLeft,
   FaArrowUpRightFromSquare,
+  FaCircleCheck,
+  FaBan,
   FaComments,
   FaGithub,
   FaHandshake,
   FaLinkedin,
   FaLocationDot,
   FaPen,
-  FaShieldHalved,
   FaStar,
 } from "react-icons/fa6";
 import { getUserById } from "../api/userApi";
+import { blockUser, unblockUser } from "../api/userApi";
 import ReportTargetButton from "../components/ReportTargetButton";
+import PostTimeline from "../components/PostTimeline";
 import {
   getRequestStatus,
   sendRequest,
@@ -36,6 +39,7 @@ function FounderDetails() {
   const [requestStatus, setRequestStatus] =
     useState("loading");
   const [sending, setSending] = useState(false);
+  const [updatingBlock, setUpdatingBlock] = useState(false);
 
   const currentUserId = getCurrentUserId();
   const isSelf = currentUserId === id;
@@ -59,6 +63,8 @@ function FounderDetails() {
     };
 
     fetchUser();
+    window.addEventListener("founderverse:verification-updated", fetchUser);
+    return () => window.removeEventListener("founderverse:verification-updated", fetchUser);
   }, [id, currentUserId]);
 
   const handleRequest = async () => {
@@ -86,6 +92,25 @@ function FounderDetails() {
       );
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleBlockToggle = async () => {
+    if (!isAuthenticated() || isSelf || !user) return;
+    try {
+      setUpdatingBlock(true);
+      if (user.isBlockedByMe) {
+        await unblockUser(user._id);
+        setUser((current) => ({ ...current, isBlockedByMe: false }));
+      } else {
+        await blockUser(user._id);
+        setUser((current) => ({ ...current, isBlockedByMe: true }));
+      }
+      window.dispatchEvent(new Event("founderverse:chat-updated"));
+    } catch (error) {
+      alert(error.response?.data?.message || "Could not update this block.");
+    } finally {
+      setUpdatingBlock(false);
     }
   };
 
@@ -163,12 +188,13 @@ function FounderDetails() {
                   {user.executionScore || 0}
                 </span>
               </div>
+              {user.username && <p className="mt-2 font-semibold text-cyan-200">@{user.username}</p>}
               <p className="mt-2 text-xl text-cyan-200">
                 {getRoleLabel(user)}
               </p>
               {hasVerifiedRole && (
-                <span className="chip chip-mint mt-2">
-                  <FaShieldHalved />
+                <span className="chip mt-2 border-sky-300/30 bg-sky-300/10 text-sky-100">
+                  <FaCircleCheck />
                   Verified
                 </span>
               )}
@@ -195,7 +221,7 @@ function FounderDetails() {
               </span>
             )}
 
-            {!isSelf &&
+            {!isSelf && !user.isBlockedByMe && !user.hasBlockedMe &&
               !isConnected &&
               !isPending && (
               <button
@@ -223,6 +249,11 @@ function FounderDetails() {
                 <FaPen />
                 Edit My Profile
               </Link>
+            ) : user.isBlockedByMe || user.hasBlockedMe ? (
+              <span className="btn btn-secondary cursor-not-allowed opacity-60">
+                <FaBan />
+                Messaging unavailable
+              </span>
             ) : (
               <Link
                 to={
@@ -247,6 +278,17 @@ function FounderDetails() {
                 targetId={user._id}
                 targetName={user.name}
               />
+            )}
+            {!isSelf && isAuthenticated() && (
+              <button
+                type="button"
+                onClick={handleBlockToggle}
+                disabled={updatingBlock}
+                className={user.isBlockedByMe ? "btn btn-secondary" : "btn btn-danger"}
+              >
+                <FaBan />
+                {updatingBlock ? "Saving..." : user.isBlockedByMe ? "Unblock member" : "Block member"}
+              </button>
             )}
           </div>
         </div>
@@ -343,6 +385,10 @@ function FounderDetails() {
             )}
           </div>
         </div>
+      </section>
+
+      <section className="post-profile-section mt-8">
+        <PostTimeline key={user._id} type="user" id={user._id} />
       </section>
     </div>
   );

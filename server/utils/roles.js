@@ -11,12 +11,14 @@ const VERIFIABLE_ROLES = [
   "Founder",
   "Investor",
   "Mentor",
+  "Collaborator",
 ];
 
 const VERIFICATION_STATUSES = [
   "pending",
   "verified",
   "rejected",
+  "revoked",
 ];
 
 const SYSTEM_ROLES = [

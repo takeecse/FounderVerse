@@ -75,7 +75,10 @@ function Dashboard() {
 
         setStats(statsRes.data);
         setProfile(profileRes.data);
-        setActiveRole(getPrimaryRole(profileRes.data));
+        const profileRoles = normalizeRoles(profileRes.data);
+        setActiveRole(profileRoles.includes("Founder")
+          ? "Founder"
+          : getPrimaryRole(profileRes.data));
         setNotifications(noteRes.data);
       } catch (error) {
         console.error(error);
@@ -96,9 +99,9 @@ function Dashboard() {
   const roleActions = {
     Founder: [
       {
-        to: "/my-startups",
-        title: "Manage Startups",
-        text: "Review ventures, edit details, and manage members.",
+        to: "/startups",
+        title: "Browse Startups",
+        text: "See what other founders are building.",
         icon: <FaRocket />,
       },
       {
@@ -116,10 +119,10 @@ function Dashboard() {
         icon: <FaMagnifyingGlassChart />,
       },
       {
-        to: "/verification",
-        title: "Investor Verification",
-        text: "Submit investment background and company evidence.",
-        icon: <FaShieldHalved />,
+        to: "/founders",
+        title: "Meet Founders",
+        text: "Find founders and teams to connect with.",
+        icon: <FaUserGroup />,
       },
     ],
     Mentor: [
@@ -130,10 +133,10 @@ function Dashboard() {
         icon: <FaUserGroup />,
       },
       {
-        to: "/verification",
-        title: "Mentor Verification",
-        text: "Share your background for admin review.",
-        icon: <FaShieldHalved />,
+        to: "/startups",
+        title: "Explore Startups",
+        text: "Find teams that can use your experience.",
+        icon: <FaRocket />,
       },
     ],
     Collaborator: [
@@ -185,14 +188,17 @@ function Dashboard() {
             {roleDescription}
           </p>
         </div>
-
-        <Link
-          to="/notifications"
-          className="btn btn-secondary"
-        >
-          <FaBell />
-          {unreadCount} unread
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/my-startups" className="btn btn-secondary">
+            <FaRocket /> Manage Startups
+          </Link>
+          <Link to="/create-startup" className="btn btn-primary">
+            <FaPlus /> Create Startup
+          </Link>
+          <Link to="/notifications" className="btn btn-secondary">
+            <FaBell /> {unreadCount} unread
+          </Link>
+        </div>
       </div>
 
       <section className="glass-panel p-6">
@@ -252,22 +258,14 @@ function Dashboard() {
             >
               {profile?.profileCompleted ? "Edit Profile" : "Complete Profile"}
             </Link>
-            {VERIFIABLE_ROLES.includes(selectedRole) && (
-              <Link
-                to="/verification"
-                className="btn btn-secondary"
-              >
+            <Link to="/verification/profile" className="btn btn-secondary">
+              <FaShieldHalved />
+              Verify Profile
+            </Link>
+            {stats.startupCount > 0 && (
+              <Link to="/verification/startup" className="btn btn-secondary">
                 <FaShieldHalved />
-                Verify {selectedRole}
-              </Link>
-            )}
-            {selectedRole === "Founder" && (
-              <Link
-                to="/create-startup"
-                className="btn btn-primary"
-              >
-                <FaPlus />
-                {stats.startupCount > 0 ? "New Startup" : "Create Startup"}
+                Verify Startup
               </Link>
             )}
           </div>
@@ -307,7 +305,7 @@ function Dashboard() {
               <p className="mt-1 text-sm text-slate-400">
                 {VERIFIABLE_ROLES.includes(selectedRole) ? (
                   <>
-                    Verification status:{" "}
+                    Profile verification:{" "}
                     <span className="font-black text-cyan-100">
                       {selectedVerification}
                     </span>

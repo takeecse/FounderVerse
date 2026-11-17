@@ -1,8 +1,12 @@
 import Hero from "../components/Hero";
+import PostFeed from "../components/PostFeed";
 
 function Home() {
   return (
-    <Hero />
+    <>
+      <Hero />
+      <PostFeed />
+    </>
   );
 }
 

@@ -3,23 +3,23 @@ const http = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const dotenv = require("dotenv");
-
 dotenv.config();
-
 const jwt = require("jsonwebtoken");
 const userRoutes = require("./routes/userRoutes");
 const connectDB = require("./config/db");
 const User = require("./models/User");
+const { isConfiguredAdminEmail, isConfiguredSystemEmail } = require("./utils/roles");
+const { purgeExpiredBannedStartups } = require("./controllers/startupController");
 const authRoutes = require("./routes/authRoutes");
 const startupRoutes = require("./routes/startupRoutes");
 const requestRoutes = require("./routes/requestRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 const verificationRoutes = require("./routes/verificationRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-const systemRoutes = require("./routes/systemRoutes");
-const reportRoutes = require("./routes/reportRoutes");
+const postRoutes = require("./routes/postRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -90,6 +90,10 @@ const io = new Server(server, {
 
 app.set("io", io);
 
+connectDB()
+  .then(() => purgeExpiredBannedStartups(io))
+  .catch((error) => console.error("Startup ban cleanup failed:", error.message));
+
 app.use(cors(corsOptions));
 app.use(express.json({ limit: "2mb" }));
 app.use("/api/auth", authRoutes);
@@ -99,10 +103,10 @@ app.use("/api/requests", requestRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/reports", reportRoutes);
 app.use("/api/verification", verificationRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/system", systemRoutes);
-app.use("/api/reports", reportRoutes);
+app.use("/api/posts", postRoutes);
 
 io.use(async (socket, next) => {
   try {
@@ -120,15 +124,25 @@ io.use(async (socket, next) => {
     );
     const user = await User.findById(
       decoded.id
-    ).select("_id accountStatus");
+    ).select("_id email accountStatus +systemRole");
 
-    if (!user || user.accountStatus === "suspended") {
+    if (!user) {
+      return next(new Error("User not found"));
+    }
+
+    if (user.accountStatus === "suspended") {
       return next(new Error("User account is unavailable"));
     }
 
     socket.user = {
       id: user._id.toString(),
     };
+
+    socket.isAdmin = Boolean(
+      ["admin", "system"].includes(user.systemRole) ||
+      isConfiguredAdminEmail(user.email) ||
+      isConfiguredSystemEmail(user.email)
+    );
 
     next();
   } catch (error) {
@@ -138,6 +152,7 @@ io.use(async (socket, next) => {
 
 io.on("connection", (socket) => {
   socket.join(`user:${socket.user.id}`);
+  if (socket.isAdmin) socket.join("admins");
 
   console.log("User Connected:", socket.user.id);
 
@@ -157,11 +172,13 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-const startServer = async () => {
-  await connectDB();
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+const startupBanCleanupTimer = setInterval(() => {
+  purgeExpiredBannedStartups(io).catch((error) => {
+    console.error("Startup ban cleanup failed:", error.message);
   });
-};
+}, 15 * 60 * 1000);
+startupBanCleanupTimer.unref();
 
-startServer();
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

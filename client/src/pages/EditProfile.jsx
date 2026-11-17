@@ -48,6 +48,7 @@ function EditProfile() {
   );
   const [formData, setFormData] = useState({
     name: "",
+    username: "",
     roles: [],
     location: "",
     bio: "",
@@ -74,9 +75,10 @@ function EditProfile() {
         const res = await getProfile();
         const user = res.data;
 
-        setProfileCompleted(Boolean(user.profileCompleted));
+        setProfileCompleted(Boolean(user.profileCompleted && user.username));
         setFormData({
           name: user.name || "",
+          username: user.username || "",
           roles: normalizeRoles(user),
           location: user.location || "",
           bio: user.bio || "",
@@ -146,6 +148,7 @@ function EditProfile() {
   const focusFirstError = (errors) => {
     const firstField = [
       "roles",
+      "username",
       "name",
       "location",
       "bio",
@@ -212,6 +215,11 @@ function EditProfile() {
       validationErrors.name = "Enter your name.";
     }
 
+    const username = formData.username.trim().replace(/^@/, "").toLowerCase();
+    if (!/^[a-z0-9][a-z0-9_.]{2,23}$/.test(username)) {
+      validationErrors.username = "Use 3–24 letters, numbers, dots, or underscores. Start with a letter or number.";
+    }
+
     if (formData.roles.length === 0) {
       validationErrors.roles = "Select one of the role cards below to continue.";
     }
@@ -231,6 +239,7 @@ function EditProfile() {
       setSaving(true);
       const res = await updateProfile({
         name: formData.name,
+        username,
         roles: formData.roles,
         location: formData.location,
         bio: formData.bio,
@@ -260,12 +269,20 @@ function EditProfile() {
 
       navigate("/", { replace: true });
     } catch (error) {
+      if (error.response?.status === 409) {
+        const usernameError = error.response?.data?.message || "That username is already taken.";
+        setFieldErrors((current) => ({ ...current, username: usernameError }));
+        focusField("username");
+        return;
+      }
+
       const missingFields =
         error.response?.data?.missingFields || [];
       const serverErrors = missingFields.reduce(
         (errors, field) => {
           const labels = {
             name: "Enter your name.",
+            username: "Choose a unique username using 3–24 letters, numbers, dots, or underscores.",
             roles: "Select one of the role cards below to continue.",
             location: "Enter your location.",
             bio: "Add a short introduction.",
@@ -423,7 +440,7 @@ function EditProfile() {
             more profile details later.
           </p>
           <p className="mt-2 text-sm text-cyan-100">
-            Name, one role, and location are required.
+            Username, name, one role, and location are required.
           </p>
         </div>
 
@@ -483,6 +500,36 @@ function EditProfile() {
         </fieldset>
 
         <div className="form-grid">
+          <div className="md:col-span-2">
+            <label htmlFor="profile-username" className="mb-2 block text-sm font-bold text-slate-200">
+              Username <span className="text-cyan-200">(required and unique)</span>
+            </label>
+            <input
+              id="profile-username"
+              ref={(element) => { fieldRefs.current.username = element; }}
+              type="text"
+              name="username"
+              placeholder="yourname"
+              value={formData.username}
+              onChange={handleChange}
+              className="field"
+              minLength={3}
+              maxLength={24}
+              autoComplete="username"
+              required
+              aria-invalid={Boolean(fieldErrors.username)}
+              aria-describedby={fieldErrors.username ? "username-error" : "username-help"}
+            />
+            {fieldErrors.username ? (
+              <p id="username-error" className="mt-2 text-sm font-bold text-rose-200" role="alert">
+                {fieldErrors.username}
+              </p>
+            ) : (
+              <p id="username-help" className="mt-2 text-xs text-slate-400">
+                Your unique public handle. Use 3–24 letters, numbers, dots, or underscores.
+              </p>
+            )}
+          </div>
           <div>
             <input
               ref={(element) => {

@@ -25,6 +25,21 @@ const getPageLimit = (value) => {
   return Math.min(parsed, 100);
 };
 
+const isBlockedBetween = (firstUser, secondUser) =>
+  Boolean(
+    firstUser?.blockedUsers?.some((id) => id.toString() === secondUser.toString()) ||
+    secondUser?.blockedUsers?.some((id) => id.toString() === firstUser.toString())
+  );
+
+const rejectBlockedConversation = async (req, otherUserId) => {
+  const [currentUser, otherUser] = await Promise.all([
+    User.findById(req.user.id).select("blockedUsers"),
+    User.findById(otherUserId).select("blockedUsers"),
+  ]);
+
+  return !currentUser || !otherUser || isBlockedBetween(currentUser, otherUser);
+};
+
 const markConversationMessagesRead = async (
   req,
   conversationUserId
@@ -80,7 +95,10 @@ const sendMessage = async (req, res) => {
       });
     }
 
-    const receiver = await User.findById(receiverId);
+    const [receiver, sender] = await Promise.all([
+      User.findById(receiverId).select("accountStatus blockedUsers"),
+      User.findById(req.user.id).select("blockedUsers"),
+    ]);
 
     if (!receiver) {
       return res.status(404).json({
@@ -91,6 +109,13 @@ const sendMessage = async (req, res) => {
     if (receiver.accountStatus === "suspended") {
       return res.status(404).json({
         message: "Receiver not found",
+      });
+    }
+
+    if (isBlockedBetween(sender, receiver)) {
+      return res.status(403).json({
+        code: "USER_BLOCKED",
+        message: "Messaging is unavailable because one of you has blocked the other",
       });
     }
 
@@ -130,6 +155,13 @@ const getConversation = async (req, res) => {
     if (req.params.userId === req.user.id) {
       return res.status(400).json({
         message: "You cannot open a conversation with yourself",
+      });
+    }
+
+    if (await rejectBlockedConversation(req, req.params.userId)) {
+      return res.status(403).json({
+        code: "USER_BLOCKED",
+        message: "Messaging is unavailable because one of you has blocked the other",
       });
     }
 
@@ -210,6 +242,13 @@ const markConversationRead = async (req, res) => {
       });
     }
 
+    if (await rejectBlockedConversation(req, req.params.userId)) {
+      return res.status(403).json({
+        code: "USER_BLOCKED",
+        message: "Messaging is unavailable because one of you has blocked the other",
+      });
+    }
+
     const readResult = await markConversationMessagesRead(
       req,
       req.params.userId
@@ -272,13 +311,13 @@ const getConversations = async (req, res) => {
       { $sort: { lastMessageAt: -1 } },
     ]);
 
-    const users = await User.find({
+    const [users, currentUser] = await Promise.all([User.find({
       _id: {
         $in: summaries.map((summary) => summary._id),
       },
     })
-      .select("name email photoURL role location")
-      .lean();
+      .select("name email photoURL role location blockedUsers"),
+    User.findById(req.user.id).select("blockedUsers")]);
 
     const userById = new Map(
       users.map((user) => [
@@ -290,12 +329,15 @@ const getConversations = async (req, res) => {
     const conversations = summaries.flatMap((summary) => {
       const user = userById.get(summary._id.toString());
 
-      if (!user) {
+      if (!user || isBlockedBetween(currentUser, user)) {
         return [];
       }
 
+      const publicUser = user.toObject();
+      delete publicUser.blockedUsers;
+
       return {
-        ...user,
+        ...publicUser,
         _id: user._id.toString(),
         lastMessage: summary.lastMessage || "",
         lastMessageAt: summary.lastMessageAt || null,

@@ -18,6 +18,7 @@ import { clearSession, isAuthenticated } from "../utils/session";
 import { getProfile } from "../api/userApi";
 import { getConversations } from "../api/chatApi";
 import { getNotifications } from "../api/notificationApi";
+import { getAdminOverview } from "../api/adminApi";
 import socket, {
   connectSocket,
   disconnectSocket,
@@ -41,6 +42,7 @@ function Navbar() {
   const [unreadChats, setUnreadChats] = useState(0);
   const [unreadNotifications, setUnreadNotifications] =
     useState(0);
+  const [unreadAdminTasks, setUnreadAdminTasks] = useState(0);
   const [loggedIn, setLoggedIn] = useState(
     isAuthenticated()
   );
@@ -51,6 +53,7 @@ function Navbar() {
       setProfile(null);
       setUnreadChats(0);
       setUnreadNotifications(0);
+      setUnreadAdminTasks(0);
       return;
     }
 
@@ -78,6 +81,12 @@ function Navbar() {
           (item) => !item.isRead
         ).length
       );
+      if (profileRes.data.isAdmin || profileRes.data.isSystem) {
+        const adminOverview = await getAdminOverview();
+        setUnreadAdminTasks(adminOverview.data.adminInboxCount || 0);
+      } else {
+        setUnreadAdminTasks(0);
+      }
     } catch (error) {
       console.error(error);
     }
@@ -114,6 +123,7 @@ function Navbar() {
       "founderverse:notifications-read",
       loadPrivateNavData
     );
+    window.addEventListener("founderverse:admin-updated", loadPrivateNavData);
 
     return () => {
       unsubscribe();
@@ -133,6 +143,7 @@ function Navbar() {
         "founderverse:notifications-read",
         loadPrivateNavData
       );
+      window.removeEventListener("founderverse:admin-updated", loadPrivateNavData);
     };
   }, [loadPrivateNavData]);
 
@@ -152,13 +163,19 @@ function Navbar() {
       }
     };
 
-    const handleNewNotification = () => {
+    const handleNewNotification = (notification) => {
       loadPrivateNavData();
+      const notificationText = `${notification?.title || ""} ${notification?.message || ""}`;
+      if (/verification|verified badge/i.test(notificationText)) {
+        window.dispatchEvent(new Event("founderverse:verification-updated"));
+      }
     };
 
     const handleNotificationsRead = () => {
       setUnreadNotifications(0);
     };
+
+    const handleAdminInboxUpdate = () => loadPrivateNavData();
 
     socket.on("receive_message", refreshBadges);
     socket.on("messages_read", refreshBadges);
@@ -171,6 +188,8 @@ function Navbar() {
       "notifications:read-all",
       handleNotificationsRead
     );
+    socket.on("admin:inbox-updated", handleAdminInboxUpdate);
+    socket.on("user:block-updated", refreshBadges);
     window.addEventListener("focus", refreshBadges);
     window.addEventListener("online", connectSocket);
     document.addEventListener(
@@ -190,6 +209,8 @@ function Navbar() {
         "notifications:read-all",
         handleNotificationsRead
       );
+      socket.off("admin:inbox-updated", handleAdminInboxUpdate);
+      socket.off("user:block-updated", refreshBadges);
       window.removeEventListener("focus", refreshBadges);
       window.removeEventListener("online", connectSocket);
       document.removeEventListener(
@@ -209,6 +230,7 @@ function Navbar() {
     setProfile(null);
     setUnreadChats(0);
     setUnreadNotifications(0);
+    setUnreadAdminTasks(0);
     closeMenu();
     navigate("/");
   };
@@ -297,9 +319,10 @@ function Navbar() {
                 {profile?.isAdmin && (
                   <Link
                     to="/admin"
-                    className="btn btn-secondary whitespace-nowrap"
+                    className="nav-action-with-badge btn btn-secondary relative whitespace-nowrap pr-8"
                   >
                     Admin
+                    {unreadAdminTasks > 0 && <span className="nav-badge">{badgeLabel(unreadAdminTasks)}</span>}
                   </Link>
                 )}
                 {profile?.isSystem && (
@@ -445,6 +468,7 @@ function Navbar() {
                 className={navClass}
               >
                 Admin
+                {unreadAdminTasks > 0 && <span className="nav-inline-badge ml-2">{badgeLabel(unreadAdminTasks)}</span>}
               </NavLink>
             )}
             {profile?.isSystem && (

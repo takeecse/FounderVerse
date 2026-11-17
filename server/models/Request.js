@@ -20,6 +20,20 @@ const requestSchema = new mongoose.Schema(
       required: false,
     },
 
+    requestType: {
+      type: String,
+      enum: ["collaboration", "startup_invite"],
+      default: "collaboration",
+      index: true,
+    },
+
+    startupRole: {
+      type: String,
+      trim: true,
+      maxlength: 60,
+      default: "Member",
+    },
+
     message: {
       type: String,
       default: "",

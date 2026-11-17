@@ -11,6 +11,9 @@ export const getAdminOverview = () =>
     headers: authHeaders(),
   });
 
+export const markAdminInboxRead = () =>
+  axios.post(`${API}/inbox/read`, {}, { headers: authHeaders() });
+
 export const getAdminVerificationApplications = (
   params = {}
 ) =>
@@ -42,12 +45,21 @@ export const getAdminStartups = () =>
     headers: authHeaders(),
   });
 
-export const moderateAdminStartup = (id, moderationStatus) =>
+export const moderateAdminStartup = (id, moderationStatus, reason = "") =>
   axios.patch(
     `${API}/startups/${id}/moderation`,
-    { moderationStatus },
+    { moderationStatus, reason },
     { headers: authHeaders() }
   );
+
+export const deleteAdminStartup = (id) =>
+  axios.delete(`${API}/startups/${id}`, { headers: authHeaders() });
+
+export const getAdminStartupAppeals = () =>
+  axios.get(`${API}/startup-appeals`, { headers: authHeaders() });
+
+export const reviewAdminStartupAppeal = (id, payload) =>
+  axios.patch(`${API}/startup-appeals/${id}`, payload, { headers: authHeaders() });
 
 export const getAdminReports = () =>
   axios.get(`${API}/reports`, {

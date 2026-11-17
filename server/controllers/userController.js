@@ -1,5 +1,7 @@
 const User = require("../models/User");
+const mongoose = require("mongoose");
 const {
+  VERIFIABLE_ROLES,
   getPrimaryRole,
   getUserRoles,
   getVerificationMap,
@@ -8,12 +10,18 @@ const {
 
 const REQUIRED_PROFILE_FIELDS = [
   "name",
+  "username",
   "roles",
   "location",
 ];
 
+const USERNAME_PATTERN = /^[a-z0-9][a-z0-9_.]{2,23}$/;
+
 const cleanText = (value) =>
   typeof value === "string" ? value.trim() : "";
+
+const normalizeUsername = (value) =>
+  cleanText(value).replace(/^@/, "").toLowerCase();
 
 const cleanList = (value) =>
   Array.isArray(value)
@@ -29,7 +37,7 @@ const ensureRoleVerificationDefaults = (user) => {
 
   (user.roles || []).forEach((role) => {
     if (
-      ["Founder", "Investor", "Mentor"].includes(role) &&
+      VERIFIABLE_ROLES.includes(role) &&
       !user.verification.get(role)
     ) {
       user.verification.set(role, "pending");
@@ -44,6 +52,7 @@ const serializeUser = (user, options = {}) => {
       : { ...user };
 
   delete value.password;
+  delete value.blockedUsers;
 
   const systemRole = value.systemRole;
   const accountStatus = value.accountStatus || "active";
@@ -53,6 +62,7 @@ const serializeUser = (user, options = {}) => {
   value.roles = getUserRoles(value);
   value.role = getPrimaryRole(value);
   value.verification = getVerificationMap(value.verification);
+  value.profileCompleted = Boolean(value.profileCompleted && value.username);
 
   if (options.includePrivate) {
     value.isAdmin = systemRole === "admin";
@@ -97,9 +107,6 @@ const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
 
-    console.log("PROFILE UPDATE BODY:", req.body);
-console.log("ROLES RECEIVED:", req.body.roles, req.body.role);
-
     if (!user) {
       return res.status(404).json({
         message: "User not found",
@@ -108,6 +115,28 @@ console.log("ROLES RECEIVED:", req.body.roles, req.body.role);
 
     if (req.body.name !== undefined) {
       user.name = cleanText(req.body.name);
+    }
+
+    if (req.body.username !== undefined) {
+      const username = normalizeUsername(req.body.username);
+
+      if (!USERNAME_PATTERN.test(username)) {
+        return res.status(400).json({
+          message: "Username must be 3–24 characters and use letters, numbers, dots, or underscores.",
+          missingFields: ["username"],
+        });
+      }
+
+      const usernameInUse = await User.exists({
+        username,
+        _id: { $ne: user._id },
+      });
+
+      if (usernameInUse) {
+        return res.status(409).json({ message: "That username is already taken." });
+      }
+
+      user.username = username;
     }
 
     if (req.body.bio !== undefined) {
@@ -218,6 +247,9 @@ console.log("ROLES RECEIVED:", req.body.roles, req.body.role);
       })
     );
   } catch (error) {
+    if (error.code === 11000 && error.keyPattern?.username) {
+      return res.status(409).json({ message: "That username is already taken." });
+    }
     res.status(500).json({
       message: error.message,
     });
@@ -252,12 +284,73 @@ const getUserById = async (req, res) => {
       });
     }
 
-    res.json(serializeUser(user));
+    const value = serializeUser(user);
+
+    if (req.user && req.user.id !== user._id.toString()) {
+      const viewer = await User.findById(req.user.id).select("blockedUsers");
+      value.isBlockedByMe = Boolean(viewer?.blockedUsers?.some(
+        (blockedId) => blockedId.toString() === user._id.toString()
+      ));
+      value.hasBlockedMe = Boolean(user.blockedUsers?.some(
+        (blockedId) => blockedId.toString() === req.user.id
+      ));
+    }
+
+    res.json(value);
 
   } catch (error) {
     res.status(500).json({
       message: error.message,
     });
+  }
+};
+
+const blockUser = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid member" });
+    }
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ message: "You cannot block yourself" });
+    }
+
+    const target = await User.findOne({
+      _id: req.params.id,
+      accountStatus: { $ne: "suspended" },
+    }).select("_id");
+    if (!target) return res.status(404).json({ message: "Member not found" });
+
+    await User.updateOne(
+      { _id: req.user.id },
+      { $addToSet: { blockedUsers: target._id } }
+    );
+    req.app.get("io")
+      ?.to(`user:${req.user.id}`)
+      .to(`user:${target._id}`)
+      .emit("user:block-updated", { userA: req.user.id, userB: target._id.toString() });
+    res.json({ blocked: true, userId: target._id.toString() });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const unblockUser = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid member" });
+    }
+
+    await User.updateOne(
+      { _id: req.user.id },
+      { $pull: { blockedUsers: req.params.id } }
+    );
+    req.app.get("io")
+      ?.to(`user:${req.user.id}`)
+      .to(`user:${req.params.id}`)
+      .emit("user:block-updated", { userA: req.user.id, userB: req.params.id });
+    res.json({ blocked: false, userId: req.params.id });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -291,4 +384,6 @@ module.exports = {
   getAllUsers,
   getUserById,
   getConnections,
+  blockUser,
+  unblockUser,
 };

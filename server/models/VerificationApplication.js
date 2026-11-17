@@ -13,10 +13,25 @@ const verificationApplicationSchema =
         required: true,
       },
 
+      subjectType: {
+        type: String,
+        enum: ["user", "startup"],
+        default: "user",
+        required: true,
+      },
+
+      startup: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Startup",
+        default: null,
+      },
+
       role: {
         type: String,
         enum: VERIFIABLE_ROLES,
-        required: true,
+        required: function requireRoleForUserApplications() {
+          return this.subjectType !== "startup";
+        },
       },
 
       status: {
@@ -24,6 +39,11 @@ const verificationApplicationSchema =
         enum: VERIFICATION_STATUSES,
         default: "pending",
       },
+
+      adminSeenBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      }],
 
       evidence: {
         organizationName: {
@@ -46,6 +66,12 @@ const verificationApplicationSchema =
           type: String,
           default: "",
         },
+        attachments: [{
+          url: { type: String, required: true, maxlength: 1000 },
+          name: { type: String, required: true, maxlength: 200 },
+          contentType: { type: String, required: true, maxlength: 120 },
+          size: { type: Number, required: true, min: 1, max: 8 * 1024 * 1024 },
+        }],
       },
 
       reviewedBy: {
@@ -71,7 +97,13 @@ const verificationApplicationSchema =
 
 verificationApplicationSchema.index({
   user: 1,
+  subjectType: 1,
   role: 1,
+  status: 1,
+});
+verificationApplicationSchema.index({
+  startup: 1,
+  subjectType: 1,
   status: 1,
 });
 

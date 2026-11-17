@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   FaArrowRight,
+  FaCircleCheck,
   FaMagnifyingGlass,
   FaMoneyBillTrendUp,
   FaUsers,
@@ -216,6 +217,11 @@ function Startups() {
                   <h2 className="text-3xl font-black">
                     {startup.title}
                   </h2>
+                  {startup.verificationStatus === "verified" && (
+                    <span className="mt-2 inline-flex items-center gap-1 rounded-full border border-sky-300/30 bg-sky-300/10 px-2 py-1 text-xs font-bold text-sky-100">
+                      <FaCircleCheck /> Verified startup
+                    </span>
+                  )}
                   <p className="mt-2 text-cyan-200">
                     {startup.tagline}
                   </p>
@@ -234,8 +240,17 @@ function Startups() {
                     Hiring
                   </span>
                 )}
+                {startup.moderationStatus === "banned" && (
+                  <span className="chip text-rose-200">Temporarily banned</span>
+                )}
               </div>
             </div>
+
+            {startup.moderationStatus === "banned" && (
+              <p className="mt-4 rounded-lg border border-rose-300/20 bg-rose-300/5 px-4 py-3 text-sm text-rose-100/80">
+                This listing is temporarily banned and remains visible while its founder may appeal.
+              </p>
+            )}
 
             <div className="mt-6 flex flex-wrap gap-2">
               {startup.industry && (

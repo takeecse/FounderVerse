@@ -9,10 +9,12 @@ import { Link, useParams } from "react-router-dom";
 import { getRoleLabel } from "../utils/roles";
 import {
   FaArrowLeft,
+  FaBan,
   FaMagnifyingGlass,
   FaPaperPlane,
   FaUser,
   FaUserGroup,
+  FaUnlock,
 } from "react-icons/fa6";
 import socket, { connectSocket } from "../socket";
 import {
@@ -21,7 +23,7 @@ import {
   markConversationRead,
   sendMessage,
 } from "../api/chatApi";
-import { getUserById } from "../api/userApi";
+import { blockUser, getUserById, unblockUser } from "../api/userApi";
 import { getCurrentUserId } from "../utils/session";
 
 const timeLabel = (date) =>
@@ -71,6 +73,7 @@ function Chat() {
     useState(false);
   const [nextCursor, setNextCursor] = useState(null);
   const [sending, setSending] = useState(false);
+  const [updatingBlock, setUpdatingBlock] = useState(false);
 
   const conversationUsers = useMemo(() => {
     if (
@@ -230,27 +233,41 @@ function Chat() {
         }
 
         shouldStickToBottomRef.current = true;
+        const [conversationsRes, userRes] = await Promise.all([
+          getConversations(),
+          getUserById(userId),
+        ]);
+
+        setConversations(conversationsRes.data);
+        setActiveUser(userRes.data);
+
+        if (userRes.data.isBlockedByMe || userRes.data.hasBlockedMe) {
+          setMessages([]);
+          setHasMoreMessages(false);
+          setNextCursor(null);
+          return;
+        }
+
         const messagesRes = await getConversation(userId, {
           limit: MESSAGE_PAGE_SIZE,
         });
-        const payload = normalizeConversationResponse(
-          messagesRes.data
-        );
-        const [conversationsRes, userRes] =
-          await Promise.all([
-            getConversations(),
-            getUserById(userId),
-          ]);
+        const payload = normalizeConversationResponse(messagesRes.data);
 
         setMessages(payload.messages);
         setHasMoreMessages(payload.hasMore);
         setNextCursor(payload.nextCursor);
-        setConversations(conversationsRes.data);
-        setActiveUser(userRes.data);
         window.dispatchEvent(
           new Event("founderverse:chat-updated")
         );
       } catch (error) {
+        if (error.response?.data?.code === "USER_BLOCKED") {
+          setMessages([]);
+          setHasMoreMessages(false);
+          setNextCursor(null);
+          setActiveUser((current) => current ? { ...current, hasBlockedMe: true } : current);
+          setLoading(false);
+          return;
+        }
         console.error(error);
       } finally {
         if (showLoading) {
@@ -359,8 +376,16 @@ function Chat() {
         .catch((error) => console.error(error));
     };
 
+    const handleBlockUpdate = (data) => {
+      if ([data?.userA, data?.userB].includes(currentUserId) && [data?.userA, data?.userB].includes(userId)) {
+        loadChat({ silent: true });
+        window.dispatchEvent(new Event("founderverse:chat-updated"));
+      }
+    };
+
     socket.on("receive_message", handleReceive);
     socket.on("messages_read", handleReadUpdate);
+    socket.on("user:block-updated", handleBlockUpdate);
     socket.on("connect", refreshAfterReconnect);
     window.addEventListener(
       "focus",
@@ -375,6 +400,7 @@ function Chat() {
     return () => {
       socket.off("receive_message", handleReceive);
       socket.off("messages_read", handleReadUpdate);
+      socket.off("user:block-updated", handleBlockUpdate);
       socket.off("connect", refreshAfterReconnect);
       window.removeEventListener(
         "focus",
@@ -479,6 +505,30 @@ function Chat() {
       );
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleBlockToggle = async () => {
+    if (!activeUser) return;
+    try {
+      setUpdatingBlock(true);
+      if (activeUser.isBlockedByMe) {
+        await unblockUser(activeUser._id);
+        setActiveUser((current) => ({ ...current, isBlockedByMe: false }));
+        window.dispatchEvent(new Event("founderverse:chat-updated"));
+        await loadChat();
+      } else {
+        await blockUser(activeUser._id);
+        setActiveUser((current) => ({ ...current, isBlockedByMe: true }));
+        setMessages([]);
+        setHasMoreMessages(false);
+        setNextCursor(null);
+        window.dispatchEvent(new Event("founderverse:chat-updated"));
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || "Could not update this block.");
+    } finally {
+      setUpdatingBlock(false);
     }
   };
 
@@ -641,7 +691,27 @@ function Chat() {
                 {activeUser?.location || "Remote"}
               </p>
             </div>
+            {activeUser && (
+              <button
+                type="button"
+                onClick={handleBlockToggle}
+                disabled={updatingBlock}
+                className={`btn ${activeUser.isBlockedByMe ? "btn-secondary" : "btn-danger"} ml-auto whitespace-nowrap`}
+                title={activeUser.isBlockedByMe ? "Unblock this member" : "Block this member"}
+              >
+                {activeUser.isBlockedByMe ? <FaUnlock /> : <FaBan />}
+                <span className="hidden sm:inline">{updatingBlock ? "Saving..." : activeUser.isBlockedByMe ? "Unblock" : "Block"}</span>
+              </button>
+            )}
           </header>
+
+          {activeUser && (activeUser.isBlockedByMe || activeUser.hasBlockedMe) && (
+            <div className="border-b border-rose-300/20 bg-rose-300/5 px-5 py-3 text-sm text-rose-100">
+              {activeUser.isBlockedByMe
+                ? "You blocked this member. Unblock them to restore messaging."
+                : "This member has blocked you. You can no longer access this conversation."}
+            </div>
+          )}
 
           <div className="chat-messages min-h-0 flex-1 overflow-y-auto p-5">
             {loading ? (
@@ -707,7 +777,7 @@ function Chat() {
             )}
           </div>
 
-          <form
+          {activeUser && !activeUser.isBlockedByMe && !activeUser.hasBlockedMe ? <form
             onSubmit={handleSend}
             className="chat-composer border-t border-white/10 p-4"
           >
@@ -729,7 +799,7 @@ function Chat() {
                 <FaPaperPlane />
               </button>
             </div>
-          </form>
+          </form> : null}
         </div>
         ) : (
         <div className="chat-empty-panel glass-panel flex h-full min-h-0 items-center justify-center p-6 text-center">

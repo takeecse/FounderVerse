@@ -7,10 +7,13 @@ const {
   getAllUsers,
   getUserById,
   getConnections,
+  blockUser,
+  unblockUser,
 } = require("../controllers/userController");
 
 const {
   protect,
+  optionalProtect,
 } = require("../middleware/authMiddleware");
 
 router.get("/", getAllUsers);
@@ -33,6 +36,9 @@ router.get(
   getConnections
 );
 
-router.get("/:id", getUserById);
+router.post("/:id/block", protect, blockUser);
+router.delete("/:id/block", protect, unblockUser);
+
+router.get("/:id", optionalProtect, getUserById);
 
 module.exports = router;

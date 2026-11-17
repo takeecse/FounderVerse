@@ -79,8 +79,61 @@ const startupSchema = new mongoose.Schema(
 
     moderationStatus: {
       type: String,
-      enum: ["published", "hidden"],
+      enum: ["published", "hidden", "banned"],
       default: "published",
+    },
+
+    verificationStatus: {
+      type: String,
+      enum: ["unverified", "pending", "verified", "rejected", "revoked"],
+      default: "unverified",
+    },
+
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+
+    verificationNote: {
+      type: String,
+      default: "",
+      maxlength: 1200,
+    },
+
+    banReason: {
+      type: String,
+      default: "",
+      maxlength: 1200,
+    },
+
+    banMessage: {
+      type: String,
+      default: "",
+      maxlength: 1200,
+    },
+
+    bannedAt: {
+      type: Date,
+      default: null,
+    },
+
+    appealDeadline: {
+      type: Date,
+      default: null,
+    },
+
+    appeal: {
+      message: { type: String, default: "", maxlength: 1200 },
+      status: {
+        type: String,
+        enum: ["none", "pending", "accepted", "rejected"],
+        default: "none",
+      },
+      submittedAt: { type: Date, default: null },
+      reviewedAt: { type: Date, default: null },
+      reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+      resolutionNote: { type: String, default: "", maxlength: 1200 },
+      seenBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     },
 
     founder: {
@@ -93,6 +146,35 @@ const startupSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+      },
+    ],
+
+    teamMemberRoles: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        role: {
+          type: String,
+          trim: true,
+          maxlength: 60,
+          default: "Member",
+        },
+        isAdmin: {
+          type: Boolean,
+          default: false,
+        },
+        addedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          default: null,
+        },
+        addedAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
   },

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  FaCircleCheck,
   FaArrowRight,
   FaLocationDot,
   FaMagnifyingGlass,
-  FaShieldHalved,
   FaStar,
 } from "react-icons/fa6";
 import { getAllUsers } from "../api/userApi";
@@ -37,9 +37,10 @@ function Founders() {
   const filteredUsers = useMemo(
     () =>
       users.filter((user) => {
-        const matchesName = user.name
-          ?.toLowerCase()
-          .includes(nameSearch.toLowerCase());
+        const search = nameSearch.trim().replace(/^@/, "").toLowerCase();
+        const matchesName = !search ||
+          user.name?.toLowerCase().includes(search) ||
+          user.username?.toLowerCase().includes(search);
 
         const matchesSkill =
           !skillSearch ||
@@ -79,7 +80,7 @@ function Founders() {
           <FaMagnifyingGlass className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
-            placeholder="Search member..."
+            placeholder="Search name or @username..."
             value={nameSearch}
             onChange={(e) =>
               setNameSearch(e.target.value)
@@ -134,14 +135,15 @@ function Founders() {
                 <h2 className="truncate text-2xl font-black">
                   {user.name}
                 </h2>
+                {user.username && <p className="mt-1 text-sm font-semibold text-cyan-200">@{user.username}</p>}
                 <p className="mt-1 text-cyan-200">
                   {getRoleLabel(user)}
                 </p>
                 {normalizeRoles(user).some((role) =>
                   isVerifiedForRole(user, role)
                 ) && (
-                  <span className="chip chip-mint mt-2">
-                    <FaShieldHalved />
+                  <span className="chip mt-2 border-sky-300/30 bg-sky-300/10 text-sky-100">
+                    <FaCircleCheck />
                     Verified
                   </span>
                 )}

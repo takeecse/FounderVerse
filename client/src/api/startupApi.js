@@ -44,7 +44,10 @@ export const getMyStartups = async () => {
 };
 
 export const getStartupById = async (id) => {
-  return axios.get(`${API}/${id}`);
+  const token = localStorage.getItem("token");
+  return axios.get(`${API}/${id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
 };
 
 export const updateStartup = async (id, startupData) => {
@@ -74,5 +77,26 @@ export const removeTeamMember = async (startupId, memberId) => {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+  });
+};
+
+export const inviteStartupMember = async (startupId, invitation) => {
+  const token = localStorage.getItem("token");
+  return axios.post(`${API}/${startupId}/invitations`, invitation, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+export const updateStartupMember = async (startupId, memberId, updates) => {
+  const token = localStorage.getItem("token");
+  return axios.patch(`${API}/${startupId}/team/${memberId}`, updates, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+export const submitStartupAppeal = async (startupId, message) => {
+  const token = localStorage.getItem("token");
+  return axios.post(`${API}/${startupId}/appeal`, { message }, {
+    headers: { Authorization: `Bearer ${token}` },
   });
 };

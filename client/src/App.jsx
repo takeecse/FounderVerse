@@ -1,5 +1,6 @@
 import {
   BrowserRouter,
+  Navigate,
   Routes,
   Route,
   useLocation,
@@ -23,6 +24,7 @@ import SentRequests from "./pages/SentRequests";
 import EditStartup from "./pages/EditStartup";
 import Notifications from "./pages/Notifications";
 import Verification from "./pages/Verification";
+import StartupVerification from "./pages/StartupVerification";
 import Chat from "./pages/Chat";
 import Connections from "./pages/Connections";
 import Navbar from "./components/Navbar";
@@ -115,7 +117,15 @@ function AppLayout() {
             />
             <Route
               path="/verification"
+              element={privatePage(<Navigate to="/verification/profile" replace />)}
+            />
+            <Route
+              path="/verification/profile"
               element={privatePage(<Verification />)}
+            />
+            <Route
+              path="/verification/startup"
+              element={privatePage(<StartupVerification />)}
             />
             <Route
               path="/chat"

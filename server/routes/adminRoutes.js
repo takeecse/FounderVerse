@@ -5,6 +5,10 @@ const {
   getModerationQueue,
   getOverview,
   getStartups,
+  deleteAdminStartup,
+  getStartupAppeals,
+  reviewStartupAppeal,
+  markAdminInboxRead,
   getUsers,
   moderateStartup,
   getVerificationApplications,
@@ -24,6 +28,7 @@ const {
 router.use(protect, requireAdmin);
 
 router.get("/overview", getOverview);
+router.post("/inbox/read", markAdminInboxRead);
 router.get("/verification", getVerificationApplications);
 router.patch(
   "/verification/:id",
@@ -33,6 +38,9 @@ router.get("/users", getUsers);
 router.patch("/users/:id", updateUser);
 router.get("/startups", getStartups);
 router.patch("/startups/:id/moderation", moderateStartup);
+router.delete("/startups/:id", deleteAdminStartup);
+router.get("/startup-appeals", getStartupAppeals);
+router.patch("/startup-appeals/:id", reviewStartupAppeal);
 router.get("/reports", getReports);
 router.patch("/reports/:id", reviewReport);
 router.get("/moderation", getModerationQueue);

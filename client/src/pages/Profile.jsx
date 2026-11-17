@@ -1,21 +1,24 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   FaArrowUpRightFromSquare,
   FaBullseye,
   FaCheck,
+  FaCircleCheck,
   FaGithub,
   FaLinkedin,
   FaLocationDot,
   FaPen,
   FaStar,
-  FaShieldHalved,
 } from "react-icons/fa6";
 import { getProfile } from "../api/userApi";
 import { auth } from "../firebase";
+import PostComposer from "../components/PostComposer";
+import PostTimeline from "../components/PostTimeline";
 import { normalizeExternalUrl } from "../utils/links";
 import {
+  VERIFIABLE_ROLES,
   getRoleLabel,
   getVerificationStatus,
   normalizeRoles,
@@ -23,22 +26,28 @@ import {
 
 function Profile() {
   const [user, setUser] = useState(null);
+  const [loadError, setLoadError] = useState("");
   const [googlePhotoURL, setGooglePhotoURL] = useState(
     auth.currentUser?.photoURL || ""
   );
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await getProfile();
-        setUser(res.data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    fetchProfile();
+  const fetchProfile = useCallback(async () => {
+    setLoadError("");
+    try {
+      const res = await getProfile();
+      setUser(res.data);
+    } catch (error) {
+      console.error(error);
+      setLoadError(error.response?.data?.message || "Could not load your profile. Check your connection and try again.");
+    }
   }, []);
+
+  useEffect(() => {
+    fetchProfile();
+    window.addEventListener("founderverse:verification-updated", fetchProfile);
+
+    return () => window.removeEventListener("founderverse:verification-updated", fetchProfile);
+  }, [fetchProfile]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -49,6 +58,20 @@ function Profile() {
   }, []);
 
   if (!user) {
+    if (loadError) {
+      return (
+        <div className="page-shell flex min-h-[50vh] items-center justify-center">
+          <div className="glass-panel max-w-xl p-8 text-center">
+            <h1 className="text-2xl font-black">Your profile could not load</h1>
+            <p role="alert" className="mt-3 text-sm text-rose-200">{loadError}</p>
+            <button type="button" onClick={fetchProfile} className="btn btn-primary mt-5">
+              Try again
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="page-shell flex min-h-[50vh] items-center justify-center text-slate-300">
         Loading profile...
@@ -136,14 +159,11 @@ function Profile() {
                 {completionPercent}% complete
               </span>
             </div>
+            <p className="mt-2 font-semibold text-cyan-200">@{user.username || "username-not-set"}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {roles.length > 0 ? (
                 roles.map((role) => {
-                  const isVerifiable = [
-                    "Founder",
-                    "Investor",
-                    "Mentor",
-                  ].includes(role);
+                  const isVerifiable = VERIFIABLE_ROLES.includes(role);
 
                   const status = isVerifiable
                     ? getVerificationStatus(user, role)
@@ -155,14 +175,14 @@ function Profile() {
                       className="flex flex-wrap items-center gap-2"
                     >
                       <span
-                        className={`chip ${status === "verified" ? "chip-mint" : ""
+                        className={`chip ${status === "verified" ? "border-sky-300/30 bg-sky-300/10 text-sky-100" : ""
                           }`}
                       >
                         {role}
 
                         {status === "verified" && (
                           <>
-                            <FaShieldHalved />
+                            <FaCircleCheck className="text-sky-300" />
                             Verified
                           </>
                         )}
@@ -170,7 +190,7 @@ function Profile() {
 
                       {isVerifiable && status !== "verified" && (
                         <Link
-                          to="/verification"
+                          to="/verification/profile"
                           className="text-xs font-bold text-cyan-200 hover:text-cyan-100"
                         >
                           {status === "pending"
@@ -329,6 +349,15 @@ function Profile() {
             )}
           </div>
         </div>
+      </section>
+
+      <section className="post-profile-section mt-8">
+        <PostTimeline
+          key={user._id}
+          type="user"
+          id={user._id}
+          composer={(onPosted) => <PostComposer author={user} onPosted={onPosted} />}
+        />
       </section>
     </div>
   );

@@ -10,7 +10,10 @@ const {
   updateStartup,
   deleteStartup,
   removeTeamMember,
+  updateTeamMember,
+  submitStartupAppeal,
 } = require("../controllers/startupController");
+const { inviteStartupMember } = require("../controllers/requestController");
 
 const {
   protect,
@@ -32,7 +35,19 @@ router.get(
   getMyStartups
 );
 
-router.get("/:id", getStartupById);
+router.post(
+  "/:id/appeal",
+  protect,
+  submitStartupAppeal
+);
+
+router.post(
+  "/:id/invitations",
+  protect,
+  inviteStartupMember
+);
+
+router.get("/:id", optionalProtect, getStartupById);
 
 router.post(
   "/",
@@ -56,6 +71,12 @@ router.delete(
   "/:id/team/:memberId",
   protect,
   removeTeamMember
+);
+
+router.patch(
+  "/:id/team/:memberId",
+  protect,
+  updateTeamMember
 );
 
 module.exports = router;

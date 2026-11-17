@@ -31,7 +31,10 @@ export const getAllUsers = async () => {
 };
 
 export const getUserById = async (id) => {
-  return axios.get(`${API}/${id}`);
+  const token = localStorage.getItem("token");
+  return axios.get(`${API}/${id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
 };
 
 export const getConnections = async () => {
@@ -41,5 +44,19 @@ export const getConnections = async () => {
     headers: {
       Authorization: `Bearer ${token}`,
     },
+  });
+};
+
+export const blockUser = async (id) => {
+  const token = localStorage.getItem("token");
+  return axios.post(`${API}/${id}/block`, {}, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+};
+
+export const unblockUser = async (id) => {
+  const token = localStorage.getItem("token");
+  return axios.delete(`${API}/${id}/block`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
 };

@@ -59,6 +59,11 @@ function SentRequests() {
               key={request._id}
               className="glass-card p-6"
             >
+              {request.requestType === "startup_invite" && (
+                <p className="mb-4 text-sm font-bold text-cyan-200">
+                  Startup invitation · Role: {request.startupRole || "Member"}
+                </p>
+              )}
               <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                 <div className="flex items-start gap-4">
                   <img
@@ -73,6 +78,7 @@ function SentRequests() {
                     <h2 className="text-2xl font-black">
                       {request.receiver.name}
                     </h2>
+                    {request.receiver.username && <p className="mt-1 text-sm font-semibold text-cyan-200">@{request.receiver.username}</p>}
                     <p className="mt-1 text-cyan-200">
                      {getRoleLabel(request.receiver)}
                     </p>
@@ -81,7 +87,7 @@ function SentRequests() {
                     </p>
                     {request.startup?.title && (
                       <p className="mt-3 text-sm text-amber-200">
-                        Startup: {request.startup.title}
+                        {request.requestType === "startup_invite" ? "Invitation to join" : "Startup:"} {request.startup.title}
                       </p>
                     )}
                   </div>
@@ -109,7 +115,7 @@ function SentRequests() {
                   View Profile
                 </Link>
 
-                {request.status === "accepted" && (
+                {request.status === "accepted" && request.requestType !== "startup_invite" && (
                   <Link
                     to={`/chat/${request.receiver._id}`}
                     className="btn btn-primary"

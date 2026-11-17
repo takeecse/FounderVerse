@@ -5,6 +5,9 @@ const mongoose = require("mongoose");
 const {
   createNotification,
 } = require("./notificationController");
+const { canManageStartup } = require("../utils/startupAccess");
+
+const USERNAME_PATTERN = /^[a-z0-9][a-z0-9_.]{2,23}$/;
 
 const isValidId = (id) =>
   mongoose.Types.ObjectId.isValid(id);
@@ -65,6 +68,12 @@ const sendRequest = async (req, res) => {
       if (!startup) {
         return res.status(404).json({
           message: "Startup not found",
+        });
+      }
+
+      if (startup.moderationStatus === "banned") {
+        return res.status(403).json({
+          message: "Requests are unavailable while this startup is temporarily banned",
         });
       }
 
@@ -149,6 +158,81 @@ const sendRequest = async (req, res) => {
     res.status(500).json({
       message: error.message,
     });
+  }
+};
+
+const inviteStartupMember = async (req, res) => {
+  try {
+    const startupId = req.params.id;
+    const username = typeof req.body.username === "string"
+      ? req.body.username.trim().replace(/^@/, "").toLowerCase()
+      : "";
+    const role = typeof req.body.role === "string"
+      ? req.body.role.trim().slice(0, 60)
+      : "";
+    const message = typeof req.body.message === "string"
+      ? req.body.message.trim().slice(0, 1200)
+      : "";
+
+    if (!isValidId(startupId)) {
+      return res.status(400).json({ message: "Invalid startup" });
+    }
+    if (!USERNAME_PATTERN.test(username)) {
+      return res.status(400).json({ message: "Enter a valid username (3–24 letters, numbers, dots, or underscores)." });
+    }
+    if (!role) {
+      return res.status(400).json({ message: "Choose a role for this startup member." });
+    }
+
+    const startup = await Startup.findById(startupId);
+    if (!startup) return res.status(404).json({ message: "Startup not found" });
+    if (startup.moderationStatus === "banned") {
+      return res.status(403).json({ message: "A banned startup cannot invite members." });
+    }
+    if (!canManageStartup(startup, req.user.id)) {
+      return res.status(403).json({ message: "Only this startup's founder or startup admin can invite members." });
+    }
+
+    const invitee = await User.findOne({
+      username,
+      accountStatus: { $ne: "suspended" },
+    }).select("_id name username");
+    if (!invitee) return res.status(404).json({ message: "No active member has that username." });
+    if (invitee._id.toString() === req.user.id) {
+      return res.status(400).json({ message: "You cannot invite yourself." });
+    }
+    if (startup.teamMembers.some((member) => member.toString() === invitee._id.toString())) {
+      return res.status(409).json({ message: "That person is already on this startup team." });
+    }
+
+    const existingInvite = await Request.findOne({
+      startup: startup._id,
+      receiver: invitee._id,
+      requestType: "startup_invite",
+      status: "pending",
+    });
+    if (existingInvite) {
+      return res.status(409).json({ message: "There is already an active invitation for that member." });
+    }
+
+    const request = await Request.create({
+      sender: req.user.id,
+      receiver: invitee._id,
+      startup: startup._id,
+      requestType: "startup_invite",
+      startupRole: role,
+      message: message || `You are invited to join ${startup.title} as ${role}.`,
+    });
+
+    await createNotification(req, {
+      user: invitee._id,
+      title: `Invitation to join ${startup.title}`,
+      message: `You have been invited to join ${startup.title} as ${role}. Review the request to accept or decline.`,
+    });
+
+    res.status(201).json({ request, invitee: { _id: invitee._id, name: invitee.name, username: invitee.username } });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -249,7 +333,7 @@ const getReceivedRequests = async (req, res) => {
         .sort({ createdAt: -1 })
         .populate(
           "sender",
-          "name email photoURL role"
+          "name username email photoURL role roles"
         )
         .populate(
           "startup",
@@ -275,7 +359,7 @@ const getSentRequests = async (req, res) => {
         .sort({ createdAt: -1 })
         .populate(
           "receiver",
-          "name email photoURL role"
+          "name username email photoURL role roles"
         )
         .populate(
           "startup",
@@ -326,24 +410,64 @@ const acceptRequest = async (req, res) => {
       });
     }
 
+    if (request.requestType === "startup_invite") {
+      const startup = await Startup.findById(request.startup);
+      if (!startup) {
+        return res.status(404).json({ message: "This startup no longer exists." });
+      }
+      if (startup.moderationStatus === "banned") {
+        return res.status(403).json({ message: "This startup is temporarily banned and cannot add members." });
+      }
+      if (startup.teamMembers.some((member) => member.toString() === req.user.id)) {
+        return res.status(409).json({ message: "You are already a member of this startup." });
+      }
+
+      startup.teamMembers.addToSet(req.user.id);
+      const membership = startup.teamMemberRoles.find((item) => item.user.toString() === req.user.id);
+      if (membership) {
+        membership.role = request.startupRole || "Member";
+        membership.isAdmin = false;
+        membership.addedBy = request.sender;
+        membership.addedAt = new Date();
+      } else {
+        startup.teamMemberRoles.push({
+          user: req.user.id,
+          role: request.startupRole || "Member",
+          isAdmin: false,
+          addedBy: request.sender,
+        });
+      }
+
+      request.status = "accepted";
+      await Promise.all([startup.save(), request.save()]);
+      await createNotification(req, {
+        user: request.sender,
+        title: "Startup invitation accepted",
+        message: `Your invitation to join ${startup.title} was accepted as ${request.startupRole || "Member"}.`,
+      });
+
+      return res.json(request);
+    }
+
     request.status =
       "accepted";
 
-    await request.save();
-
     if (request.startup) {
-      await Startup.updateOne(
-        {
-          _id: request.startup,
-          founder: req.user.id,
-        },
-        {
-          $addToSet: {
-            teamMembers: request.sender,
-          },
-        }
-      );
+      const startup = await Startup.findOne({
+        _id: request.startup,
+        founder: req.user.id,
+      });
+      if (!startup) return res.status(404).json({ message: "Startup not found" });
+      if (!startup.teamMembers.some((member) => member.toString() === request.sender.toString())) {
+        startup.teamMembers.addToSet(request.sender);
+      }
+      if (!startup.teamMemberRoles.some((item) => item.user.toString() === request.sender.toString())) {
+        startup.teamMemberRoles.push({ user: request.sender, role: "Member", addedBy: req.user.id });
+      }
+      await startup.save();
     }
+
+    await request.save();
 
     await User.updateOne(
       { _id: req.user.id },
@@ -421,9 +545,10 @@ const rejectRequest = async (req, res) => {
 
     await createNotification(req, {
       user: request.sender,
-      title: "Request Rejected",
-      message:
-        "Your co-founder request was rejected.",
+      title: request.requestType === "startup_invite" ? "Startup invitation declined" : "Request Rejected",
+      message: request.requestType === "startup_invite"
+        ? "Your startup invitation was declined."
+        : "Your co-founder request was rejected.",
     });
 
     res.json(request);
@@ -437,6 +562,7 @@ const rejectRequest = async (req, res) => {
 
 module.exports = {
   sendRequest,
+  inviteStartupMember,
   getRequestStatus,
   getReceivedRequests,
   getSentRequests,

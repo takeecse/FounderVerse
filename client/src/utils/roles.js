@@ -21,6 +21,7 @@ export const VERIFIABLE_ROLES = [
   "Founder",
   "Investor",
   "Mentor",
+  "Collaborator",
 ];
 
 export const normalizeRoles = (user = {}) => {

@@ -18,10 +18,12 @@ The legacy `Collaborator/Seeker` and `Seeker` values are normalized to `Collabor
 Platform access is stored separately in `User.systemRole` and is never editable through public profile endpoints:
 
 - **user**: normal member access.
-- **admin**: human moderation access at `/admin`; can review verification and reports, assign public personas, suspend/reactivate member accounts, and hide/republish startup listings.
+- **admin**: human moderation access at `/admin`; can review verification and reports, handle startup appeals, assign public personas, suspend/reactivate member accounts, hide/republish or temporarily ban startup listings, and permanently delete listings. The admin button badge counts unread reports, verification tasks, and appeals separately for each administrator.
 - **system**: platform operator access at `/system`; can inspect service and platform health and grant/revoke human admin access. System accounts are configured through `SYSTEM_EMAILS` and cannot be created or promoted through public APIs.
 
 Server middleware is authoritative for every protected operation. The client only controls navigation and workspace presentation.
+
+Members can submit reports and verification applications with image or document evidence. Report and verification uploads use Firebase Storage under the submitting Firebase account; deploy `storage.rules` with the Firebase CLI. Verification requests cover professional user roles and founder-owned startups, and approval adds the corresponding badge. A temporarily banned startup remains discoverable with its status displayed for 30 days. Founders can submit an appeal before the deadline; unresolved bans are removed by the server cleanup job after the deadline. Direct messages are blocked in both directions whenever either participant has blocked the other.
 
 ## Configuration
 

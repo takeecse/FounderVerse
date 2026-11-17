@@ -20,6 +20,18 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
+    username: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      minlength: 3,
+      maxlength: 24,
+      match: /^[a-z0-9][a-z0-9_.]{2,23}$/,
+      unique: true,
+      sparse: true,
+      default: undefined,
+    },
+
     email: {
       type: String,
       required: true,
@@ -110,6 +122,13 @@ const userSchema = new mongoose.Schema(
     },
     
     connections: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    blockedUsers: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",

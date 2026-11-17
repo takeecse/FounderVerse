@@ -91,6 +91,9 @@ function CreateStartup() {
         onSubmit={handleSubmit}
         className="glass-panel p-6 sm:p-8"
       >
+        <p className="mb-6 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-4 text-sm leading-6 text-cyan-50">
+          Creating a startup automatically adds the Founder stakeholder role to your profile and lists you as its founder.
+        </p>
         <div className="form-grid">
           <input
             name="title"
